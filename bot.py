@@ -35,14 +35,14 @@ import anthropic
 
 CONFIG = {
     # --- Mercado Libre ---
-    os.environ.get("ML_CLIENT_ID",""):     os.environ.get("ML_CLIENT_ID",""),
-    os.environ.get("ML_CLIENT_SECRET",""): os.environ.get("ML_CLIENT_SECRET",""),
-    os.environ.get("ML_ACCESS_TOKEN",""):  "APP_USR-ML_CLIENT_ID-052721-085761e6e18d911983d5d2880a4561f3-ML_USER_ID",   # se refresca automático
-    "ML_REFRESH_TOKEN": "",
-    os.environ.get("ML_USER_ID",""):       os.environ.get("ML_USER_ID",""),         # número de tu cuenta ML
+    "ML_CLIENT_ID":     "TU_CLIENT_ID_AQUI",
+    "ML_CLIENT_SECRET": "TU_CLIENT_SECRET_AQUI",
+    "ML_ACCESS_TOKEN":  "TU_ACCESS_TOKEN_AQUI",   # se refresca automático
+    "ML_REFRESH_TOKEN": "TU_REFRESH_TOKEN_AQUI",
+    "ML_USER_ID":       "TU_USER_ID_AQUI",         # número de tu cuenta ML
 
     # --- Claude (Anthropic) ---
-    "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY",""),
+    "ANTHROPIC_API_KEY": "TU_ANTHROPIC_API_KEY_AQUI",
 
     # --- Precios automáticos ---
     # Margen mínimo sobre costo (0.15 = 15%). No baja de esto nunca.
@@ -67,7 +67,7 @@ class MercadoLibreClient:
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.token = cfg[os.environ.get("ML_ACCESS_TOKEN","")]
+        self.token = cfg["ML_ACCESS_TOKEN"]
 
     def headers(self):
         return {"Authorization": f"Bearer {self.token}"}
@@ -76,8 +76,8 @@ class MercadoLibreClient:
         """Renueva el access token usando el refresh token."""
         r = requests.post(f"{self.BASE}/oauth/token", data={
             "grant_type":    "refresh_token",
-            "client_id":     self.cfg[os.environ.get("ML_CLIENT_ID","")],
-            "client_secret": self.cfg[os.environ.get("ML_CLIENT_SECRET","")],
+            "client_id":     self.cfg["ML_CLIENT_ID"],
+            "client_secret": self.cfg["ML_CLIENT_SECRET"],
             "refresh_token": self.cfg["ML_REFRESH_TOKEN"],
         })
         if r.status_code == 200:
@@ -103,7 +103,7 @@ class MercadoLibreClient:
         return r.json()
 
     def obtener_preguntas_sin_responder(self):
-        uid = self.cfg[os.environ.get("ML_USER_ID","")]
+        uid = self.cfg["ML_USER_ID"]
         return self.get(f"/questions/search", params={
             "seller_id": uid,
             "status": "UNANSWERED",
@@ -114,7 +114,7 @@ class MercadoLibreClient:
         return self.post(f"/answers", {"question_id": question_id, "text": texto})
 
     def obtener_mis_ventas(self, dias=30):
-        uid = self.cfg[os.environ.get("ML_USER_ID","")]
+        uid = self.cfg["ML_USER_ID"]
         desde = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%dT00:00:00.000-03:00")
         return self.get(f"/orders/search", params={
             "seller": uid,
@@ -123,7 +123,7 @@ class MercadoLibreClient:
         })
 
     def obtener_mis_publicaciones(self):
-        uid = self.cfg[os.environ.get("ML_USER_ID","")]
+        uid = self.cfg["ML_USER_ID"]
         return self.get(f"/users/{uid}/items/search", params={"status": "active"})
 
     def obtener_detalle_item(self, item_id):
@@ -493,9 +493,51 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <div style="text-align:center;margin-top:12px">
     <button class="btn btn-outline" onclick="cicloCompleto()">🤖 Ejecutar ciclo completo ahora</button>
   </div>
+
+  <div id="seccion-pendientes" style="margin-top:28px;display:none">
+    <p style="font-size:14px;font-weight:500;margin-bottom:14px;color:var(--color-text-primary)">⏳ Ventas pendientes de aprobación</p>
+    <div id="lista-pendientes"></div>
+  </div>
 </main>
 
 <script>
+async function cargarPendientes() {
+  const r = await fetch('/api/ventas-pendientes');
+  const ventas = await r.json();
+  const seccion = document.getElementById('seccion-pendientes');
+  const lista = document.getElementById('lista-pendientes');
+  if (!ventas.length) { seccion.style.display='none'; return; }
+  seccion.style.display='block';
+  lista.innerHTML = ventas.map(v => `
+    <div style="background:var(--color-background-secondary);border:1px solid var(--color-border-secondary);border-radius:10px;padding:16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div style="flex:1">
+          <p style="font-size:13px;font-weight:500;margin:0 0 4px">${v.producto}</p>
+          <p style="font-size:12px;color:var(--color-text-secondary);margin:0 0 2px">👤 ${v.comprador} · 📍 ${v.ciudad}, ${v.provincia}</p>
+          <p style="font-size:12px;color:var(--color-text-secondary);margin:0">🏠 ${v.direccion} (CP: ${v.cp}) · 📦 Cantidad: ${v.cantidad}</p>
+          <p style="font-size:12px;font-weight:500;color:var(--color-text-success);margin:4px 0 0">💰 Total ML: $${v.total_ml?.toLocaleString('es-AR')}</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button onclick="aprobarVenta('${v.order_id}')" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">✅ Aprobar y pedir en Droppers</button>
+          <button onclick="rechazarVenta('${v.order_id}')" style="background:transparent;color:var(--color-text-secondary);border:1px solid var(--color-border-secondary);padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer">✗ Ignorar</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function aprobarVenta(orderId) {
+  const btn = event.target;
+  btn.textContent = '⏳ Procesando...';
+  btn.disabled = true;
+  await fetch('/api/aprobar-venta/' + orderId, {method:'POST'});
+  setTimeout(cargarPendientes, 3000);
+}
+
+async function rechazarVenta(orderId) {
+  await fetch('/api/rechazar-venta/' + orderId, {method:'POST'});
+  cargarPendientes();
+}
+
 async function cargarMetricas() {
   const r = await fetch('/api/metricas');
   const d = await r.json();
@@ -550,7 +592,8 @@ async function cicloCompleto() {
 
 cargarMetricas();
 cargarActividad();
-setInterval(() => { cargarMetricas(); cargarActividad(); }, 60000);
+cargarPendientes();
+setInterval(() => { cargarMetricas(); cargarActividad(); cargarPendientes(); }, 30000);
 </script>
 </body>
 </html>"""
@@ -607,7 +650,7 @@ def log(msg):
 
 def scheduler_thread():
     """Corre el ciclo automático cada hora."""
-    schedule.every(5).minutes.do(sistema.ciclo_completo)
+    schedule.every(1).hours.do(sistema.ciclo_completo)
     schedule.every(6).hours.do(sistema.actualizar_metricas)
     while True:
         schedule.run_pending()
@@ -623,7 +666,7 @@ if __name__ == "__main__":
     """)
 
     # Verificar configuración
-    if CONFIG[os.environ.get("ML_ACCESS_TOKEN","")] == "APP_USR-ML_CLIENT_ID-052721-085761e6e18d911983d5d2880a4561f3-ML_USER_ID":
+    if CONFIG["ML_ACCESS_TOKEN"] == "TU_ACCESS_TOKEN_AQUI":
         print("⚠️  ATENCIÓN: Completá tus credenciales en la sección CONFIGURACIÓN")
         print("   Abrí bot.py con un editor de texto y completá los datos.\n")
     else:
@@ -633,3 +676,60 @@ if __name__ == "__main__":
         threading.Thread(target=scheduler_thread, daemon=True).start()
 
     app.run(host="0.0.0.0", port=5000, debug=False)
+
+
+# =============================================================
+#  INTEGRACIÓN CON DROPPERS (agregar al final de bot.py)
+# =============================================================
+
+# Importar el módulo de Droppers
+try:
+    from droppers_bot import MonitorVentas
+    monitor_ventas = MonitorVentas(sistema.ml)
+    DROPPERS_ACTIVO = True
+    print("✅ Módulo Droppers cargado correctamente")
+except Exception as e:
+    DROPPERS_ACTIVO = False
+    print(f"⚠️  Módulo Droppers no disponible: {e}")
+
+
+@app.route("/api/ventas-nuevas", methods=["POST"])
+def api_ventas_nuevas():
+    if DROPPERS_ACTIVO:
+        threading.Thread(target=monitor_ventas.verificar_ventas_nuevas).start()
+        return jsonify({"status": "verificando ventas nuevas"})
+    return jsonify({"status": "módulo Droppers no activo"})
+
+
+@app.route("/api/estado-droppers")
+def api_estado_droppers():
+    return jsonify({
+        "activo": DROPPERS_ACTIVO,
+        "ventas_procesadas": len(monitor_ventas.ventas_procesadas) if DROPPERS_ACTIVO else 0
+    })
+
+
+# --- Rutas para el flujo de aprobación de ventas ---
+
+@app.route("/api/ventas-pendientes")
+def api_ventas_pendientes():
+    if not DROPPERS_ACTIVO:
+        return jsonify([])
+    pendientes = list(monitor_ventas.ventas_pendientes.values())
+    # No enviar orden_raw al frontend
+    for v in pendientes:
+        v.pop("orden_raw", None)
+    return jsonify(pendientes)
+
+@app.route("/api/aprobar-venta/<order_id>", methods=["POST"])
+def api_aprobar_venta(order_id):
+    if not DROPPERS_ACTIVO:
+        return jsonify({"ok": False, "error": "Droppers no activo"})
+    threading.Thread(target=monitor_ventas.aprobar_venta, args=(order_id,)).start()
+    return jsonify({"ok": True, "status": "procesando pedido en Droppers"})
+
+@app.route("/api/rechazar-venta/<order_id>", methods=["POST"])
+def api_rechazar_venta(order_id):
+    if not DROPPERS_ACTIVO:
+        return jsonify({"ok": False})
+    return jsonify(monitor_ventas.rechazar_venta(order_id))
