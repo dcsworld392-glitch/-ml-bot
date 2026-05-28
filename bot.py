@@ -349,30 +349,99 @@ class SistemaAutomatizado:
                 log(f"❌ Error procesando pregunta {pregunta.get('id')}: {e}")
 
     def actualizar_metricas(self):
-        """Calcula y guarda métricas de negocio."""
+        """Calcula y guarda métricas de negocio incluyendo hoy, ayer y ganancia neta."""
         log("📊 Actualizando métricas...")
         try:
+            from costos import calculadora, registro_costos
+
             ventas_data = self.ml.obtener_mis_ventas(dias=30)
             ordenes = ventas_data.get("results", [])
 
-            total_ventas = sum(o.get("total_amount", 0) for o in ordenes)
-            cantidad_ventas = len(ordenes)
-            ticket_promedio = total_ventas / cantidad_ventas if cantidad_ventas else 0
+            ahora = datetime.now()
+            hoy = ahora.date()
+            ayer = hoy - timedelta(days=1)
 
-            # Ventas de los últimos 7 días
-            hace_7_dias = datetime.now() - timedelta(days=7)
-            ventas_semana = [o for o in ordenes if
+            def fecha_orden(o):
+                try:
+                    return datetime.fromisoformat(o.get("date_created","2000-01-01T00:00:00.000-03:00")[:19]).date()
+                except:
+                    return hoy - timedelta(days=999)
+
+            ordenes_hoy  = [o for o in ordenes if fecha_orden(o) == hoy]
+            ordenes_ayer = [o for o in ordenes if fecha_orden(o) == ayer]
+            hace_7_dias  = ahora - timedelta(days=7)
+            ordenes_semana = [o for o in ordenes if
                 datetime.fromisoformat(o.get("date_created","2000-01-01T00:00:00.000-03:00")[:19]) > hace_7_dias]
 
+            total_30d   = sum(o.get("total_amount", 0) for o in ordenes)
+            total_hoy   = sum(o.get("total_amount", 0) for o in ordenes_hoy)
+            total_ayer  = sum(o.get("total_amount", 0) for o in ordenes_ayer)
+            ticket_prom = total_30d / len(ordenes) if ordenes else 0
+
+            # Calcular ganancia neta estimada (usando costos registrados o estimando 20% si no hay datos)
+            def ganancia_orden(o):
+                items = o.get("order_items", [{}])
+                item_id = str(items[0].get("item", {}).get("id", "")) if items else ""
+                precio = o.get("total_amount", 0)
+                datos = registro_costos.obtener(item_id)
+                costo = datos.get("costo") or precio * 0.55  # estimado si no hay costo registrado
+                calc = calculadora.calcular(precio, costo, datos.get("categoria","default"), datos.get("envio_gratis", False))
+                return calc["ganancia_neta"]
+
+            ganancia_hoy  = sum(ganancia_orden(o) for o in ordenes_hoy)
+            ganancia_ayer = sum(ganancia_orden(o) for o in ordenes_ayer)
+            ganancia_30d  = sum(ganancia_orden(o) for o in ordenes)
+
+            # Feed de ventas recientes con detalle
+            feed_ventas = []
+            for o in sorted(ordenes, key=lambda x: x.get("date_created",""), reverse=True)[:20]:
+                items = o.get("order_items", [{}])
+                item  = items[0].get("item", {}) if items else {}
+                precio = o.get("total_amount", 0)
+                item_id = str(item.get("id",""))
+                datos = registro_costos.obtener(item_id)
+                costo = datos.get("costo") or precio * 0.55
+                calc = calculadora.calcular(precio, costo, datos.get("categoria","default"), datos.get("envio_gratis",False))
+
+                try:
+                    fecha = datetime.fromisoformat(o.get("date_created","2000-01-01T00:00:00")[:19])
+                    diff = ahora - fecha
+                    if diff.seconds < 3600:
+                        hace = f"hace {diff.seconds // 60} min"
+                    elif diff.days == 0:
+                        hace = f"hace {diff.seconds // 3600}h"
+                    else:
+                        hace = f"hace {diff.days}d"
+                except:
+                    hace = "—"
+
+                feed_ventas.append({
+                    "order_id":      str(o.get("id","")),
+                    "titulo":        item.get("title","?")[:50],
+                    "imagen":        item.get("thumbnail",""),
+                    "precio":        round(precio, 2),
+                    "ganancia_neta": round(calc["ganancia_neta"], 2),
+                    "margen_pct":    round(calc["margen_neto_pct"], 1),
+                    "hace":          hace,
+                    "estado":        o.get("status",""),
+                })
+
             self.metricas_cache = {
-                "total_ventas_30d": round(total_ventas, 2),
-                "cantidad_ventas_30d": cantidad_ventas,
-                "ticket_promedio": round(ticket_promedio, 2),
-                "ventas_ultima_semana": len(ventas_semana),
-                "ingresos_ultima_semana": round(sum(o.get("total_amount",0) for o in ventas_semana), 2),
-                "ultima_actualizacion": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "total_ventas_30d":      round(total_30d, 2),
+                "cantidad_ventas_30d":   len(ordenes),
+                "ticket_promedio":       round(ticket_prom, 2),
+                "ventas_ultima_semana":  len(ordenes_semana),
+                "total_hoy":             round(total_hoy, 2),
+                "total_ayer":            round(total_ayer, 2),
+                "ventas_hoy":            len(ordenes_hoy),
+                "ventas_ayer":           len(ordenes_ayer),
+                "ganancia_neta_hoy":     round(ganancia_hoy, 2),
+                "ganancia_neta_ayer":    round(ganancia_ayer, 2),
+                "ganancia_neta_30d":     round(ganancia_30d, 2),
+                "feed_ventas":           feed_ventas,
+                "ultima_actualizacion":  ahora.strftime("%d/%m/%Y %H:%M"),
             }
-            self.ultima_actualizacion = datetime.now()
+            self.ultima_actualizacion = ahora
             log("✅ Métricas actualizadas")
 
         except Exception as e:
@@ -465,28 +534,51 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <span class="status-badge" id="last-update">Cargando...</span>
 </header>
 <main>
-  <div class="grid-4" id="metrics">
-    <div class="card"><p class="card-title">Ingresos 30 días</p><p class="metric-value green" id="m-ingresos">—</p><p class="metric-sub">ventas pagadas</p></div>
-    <div class="card"><p class="card-title">Ventas 30 días</p><p class="metric-value blue" id="m-ventas">—</p><p class="metric-sub">órdenes</p></div>
-    <div class="card"><p class="card-title">Ticket promedio</p><p class="metric-value" id="m-ticket">—</p><p class="metric-sub">por venta</p></div>
-    <div class="card"><p class="card-title">Esta semana</p><p class="metric-value amber" id="m-semana">—</p><p class="metric-sub">ventas en 7 días</p></div>
+  <!-- FILA 1: Dinero en tiempo real -->
+  <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px">💰 Ingresos</p>
+  <div class="grid-4" style="margin-bottom:28px">
+    <div class="card"><p class="card-title">Hoy</p><p class="metric-value green" id="m-hoy">—</p><p class="metric-sub" id="m-hoy-ventas">— ventas</p></div>
+    <div class="card"><p class="card-title">Ayer</p><p class="metric-value" id="m-ayer">—</p><p class="metric-sub" id="m-ayer-ventas">— ventas</p></div>
+    <div class="card"><p class="card-title">Últimos 30 días</p><p class="metric-value blue" id="m-ingresos">—</p><p class="metric-sub" id="m-ventas">— órdenes</p></div>
+    <div class="card"><p class="card-title">Ticket promedio</p><p class="metric-value amber" id="m-ticket">—</p><p class="metric-sub">por venta</p></div>
   </div>
 
-  <div class="grid-2">
+  <!-- FILA 1b: Ganancia neta -->
+  <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px">💚 Ganancia neta (después de impuestos y comisiones)</p>
+  <div class="grid-4" style="margin-bottom:28px">
+    <div class="card"><p class="card-title">Ganancia hoy</p><p class="metric-value green" id="m-gan-hoy">—</p><p class="metric-sub">neto real</p></div>
+    <div class="card"><p class="card-title">Ganancia ayer</p><p class="metric-value" id="m-gan-ayer">—</p><p class="metric-sub">neto real</p></div>
+    <div class="card"><p class="card-title">Ganancia 30 días</p><p class="metric-value blue" id="m-gan-30d">—</p><p class="metric-sub">neto real</p></div>
+    <div class="card"><p class="card-title">Margen estimado</p><p class="metric-value amber" id="m-margen">—</p><p class="metric-sub">% promedio</p></div>
+  </div>
+
+  <!-- FILA 2: Feed de ventas + Actividad -->
+  <div class="grid-2" style="margin-bottom:28px">
+    <div class="card">
+      <p class="section-title">🛒 Ventas recientes</p>
+      <div id="feed-ventas"><p class="loading">Sin ventas aún. Las ventas aparecen acá en tiempo real.</p></div>
+    </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <p class="section-title">Actividad reciente</p>
+        <p class="section-title">⚡ Actividad del bot</p>
         <button class="btn btn-outline" style="padding:6px 12px;font-size:12px" onclick="procesarPreguntas()">🔄 Procesar preguntas</button>
       </div>
-      <div id="actividad"><p class="loading">Sin actividad aún. Corré el ciclo para empezar.</p></div>
+      <div id="actividad"><p class="loading">Sin actividad aún.</p></div>
     </div>
+  </div>
 
+  <!-- FILA 3: Sugerencias IA -->
+  <div class="grid-2" style="margin-bottom:28px">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <p class="section-title">Sugerencias de la IA</p>
-        <button class="btn" style="padding:6px 12px;font-size:12px" onclick="obtenerSugerencias()">✨ Analizar</button>
+        <p class="section-title">✨ Sugerencias de la IA</p>
+        <button class="btn" style="padding:6px 12px;font-size:12px" onclick="obtenerSugerencias()">Analizar</button>
       </div>
-      <div id="sugerencias"><p class="loading">Presioná "Analizar" para recibir recomendaciones de negocio.</p></div>
+      <div id="sugerencias"><p class="loading">Presioná "Analizar" para recibir recomendaciones.</p></div>
+    </div>
+    <div class="card">
+      <p class="section-title">🚨 Alertas — Requieren atención</p>
+      <div id="alertas"><p class="loading">Sin alertas pendientes. ✅</p></div>
     </div>
   </div>
 
@@ -494,8 +586,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <button class="btn btn-outline" onclick="cicloCompleto()">🤖 Ejecutar ciclo completo ahora</button>
   </div>
 
+  <!-- Ventas pendientes de aprobación -->
   <div id="seccion-pendientes" style="margin-top:28px;display:none">
-    <p style="font-size:14px;font-weight:500;margin-bottom:14px;color:var(--color-text-primary)">⏳ Ventas pendientes de aprobación</p>
+    <p style="font-size:14px;font-weight:600;margin-bottom:14px">⏳ Ventas pendientes — Aprobá para pedir en Droppers</p>
     <div id="lista-pendientes"></div>
   </div>
 </main>
@@ -509,24 +602,23 @@ async function cargarPendientes() {
   if (!ventas.length) { seccion.style.display='none'; return; }
   seccion.style.display='block';
   lista.innerHTML = ventas.map(v => `
-    <div style="background:var(--color-background-secondary);border:1px solid var(--color-border-secondary);border-radius:10px;padding:16px;margin-bottom:10px">
+    <div style="background:var(--surface2);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:16px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
         <div style="flex:1">
-          <p style="font-size:13px;font-weight:500;margin:0 0 4px">${v.producto}</p>
-          <p style="font-size:12px;color:var(--color-text-secondary);margin:0 0 2px">👤 ${v.comprador} · 📍 ${v.ciudad}, ${v.provincia}</p>
-          <p style="font-size:12px;color:var(--color-text-secondary);margin:0">🏠 ${v.direccion} (CP: ${v.cp}) · 📦 Cantidad: ${v.cantidad}</p>
-          <p style="font-size:12px;font-weight:500;color:var(--color-text-success);margin:4px 0 0">💰 Total ML: $${v.total_ml?.toLocaleString('es-AR')}</p>
+          <p style="font-size:13px;font-weight:600;margin:0 0 4px">${v.producto}</p>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 2px">👤 ${v.comprador} · 📍 ${v.ciudad}, ${v.provincia}</p>
+          <p style="font-size:12px;color:var(--muted);margin:0">🏠 ${v.direccion} (CP: ${v.cp}) · 📦 x${v.cantidad}</p>
+          <p style="font-size:13px;font-weight:600;color:#10b981;margin:6px 0 0">💰 $${v.total_ml?.toLocaleString('es-AR')} · ${v.hora}</p>
         </div>
-        <div style="display:flex;gap:8px;flex-shrink:0">
-          <button onclick="aprobarVenta('${v.order_id}')" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">✅ Aprobar y pedir en Droppers</button>
-          <button onclick="rechazarVenta('${v.order_id}')" style="background:transparent;color:var(--color-text-secondary);border:1px solid var(--color-border-secondary);padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer">✗ Ignorar</button>
+        <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
+          <button onclick="aprobarVenta('${v.order_id}', this)" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">✅ Aprobar y pedir en Droppers</button>
+          <button onclick="rechazarVenta('${v.order_id}')" style="background:transparent;color:var(--muted);border:1px solid var(--border);padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer">✗</button>
         </div>
       </div>
     </div>`).join('');
 }
 
-async function aprobarVenta(orderId) {
-  const btn = event.target;
+async function aprobarVenta(orderId, btn) {
   btn.textContent = '⏳ Procesando...';
   btn.disabled = true;
   await fetch('/api/aprobar-venta/' + orderId, {method:'POST'});
@@ -541,13 +633,42 @@ async function rechazarVenta(orderId) {
 async function cargarMetricas() {
   const r = await fetch('/api/metricas');
   const d = await r.json();
-  if (d.total_ventas_30d !== undefined) {
-    document.getElementById('m-ingresos').textContent = '$' + d.total_ventas_30d.toLocaleString('es-AR');
-    document.getElementById('m-ventas').textContent = d.cantidad_ventas_30d;
-    document.getElementById('m-ticket').textContent = '$' + d.ticket_promedio.toLocaleString('es-AR');
-    document.getElementById('m-semana').textContent = d.ventas_ultima_semana;
-    document.getElementById('last-update').textContent = '⏱ ' + (d.ultima_actualizacion || 'Sin datos');
+  if (d.total_ventas_30d === undefined) return;
+
+  document.getElementById('m-hoy').textContent     = '$' + (d.total_hoy||0).toLocaleString('es-AR');
+  document.getElementById('m-hoy-ventas').textContent = (d.ventas_hoy||0) + ' ventas';
+  document.getElementById('m-ayer').textContent    = '$' + (d.total_ayer||0).toLocaleString('es-AR');
+  document.getElementById('m-ayer-ventas').textContent = (d.ventas_ayer||0) + ' ventas';
+  document.getElementById('m-ingresos').textContent = '$' + d.total_ventas_30d.toLocaleString('es-AR');
+  document.getElementById('m-ventas').textContent  = d.cantidad_ventas_30d + ' órdenes';
+  document.getElementById('m-ticket').textContent  = '$' + d.ticket_promedio.toLocaleString('es-AR');
+
+  document.getElementById('m-gan-hoy').textContent  = '$' + (d.ganancia_neta_hoy||0).toLocaleString('es-AR');
+  document.getElementById('m-gan-ayer').textContent = '$' + (d.ganancia_neta_ayer||0).toLocaleString('es-AR');
+  document.getElementById('m-gan-30d').textContent  = '$' + (d.ganancia_neta_30d||0).toLocaleString('es-AR');
+  const margen = d.total_ventas_30d > 0 ? ((d.ganancia_neta_30d / d.total_ventas_30d) * 100).toFixed(1) : 0;
+  document.getElementById('m-margen').textContent  = margen + '%';
+
+  // Feed de ventas
+  const feed = d.feed_ventas || [];
+  const feedEl = document.getElementById('feed-ventas');
+  if (!feed.length) { feedEl.innerHTML = '<p class="loading">Sin ventas aún.</p>'; }
+  else {
+    feedEl.innerHTML = feed.map(v => `
+      <div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        ${v.imagen ? `<img src="${v.imagen}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.style.display='none'">` : '<div style="width:44px;height:44px;background:var(--surface2);border-radius:6px;flex-shrink:0"></div>'}
+        <div style="flex:1;min-width:0">
+          <p style="font-size:12px;font-weight:500;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.titulo}</p>
+          <p style="font-size:11px;color:var(--muted);margin:0">${v.hace} · $${v.precio?.toLocaleString('es-AR')}</p>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <p style="font-size:12px;font-weight:600;color:#10b981;margin:0">+$${v.ganancia_neta?.toLocaleString('es-AR')}</p>
+          <p style="font-size:11px;color:var(--muted);margin:0">${v.margen_pct}% margen</p>
+        </div>
+      </div>`).join('');
   }
+
+  document.getElementById('last-update').textContent = '⏱ ' + (d.ultima_actualizacion || 'Sin datos');
 }
 
 async function cargarActividad() {
