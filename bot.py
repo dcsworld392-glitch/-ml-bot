@@ -26,7 +26,7 @@ import threading
 import requests
 import schedule
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, jsonify, render_template_string, request
 import anthropic
 
 # =============================================================
@@ -531,7 +531,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <body>
 <header>
   <div class="logo"><div class="dot"></div> ML Bot Dashboard</div>
-  <span class="status-badge" id="last-update">Cargando...</span>
+  <div style="display:flex;gap:10px;align-items:center">
+    <a href="/publicar" style="font-size:12px;font-weight:500;background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);padding:6px 14px;border-radius:8px;text-decoration:none">📦 Publicar productos</a>
+    <span class="status-badge" id="last-update">Cargando...</span>
+  </div>
 </header>
 <main>
   <!-- FILA 1: Dinero en tiempo real -->
@@ -758,6 +761,90 @@ def api_ciclo():
 
 
 # =============================================================
+#  RUTAS DEL PUBLICADOR
+# =============================================================
+
+try:
+    from publicador import PublicadorML, CATEGORIAS_ML
+    publicador = PublicadorML(sistema.ml, CONFIG.get("ANTHROPIC_API_KEY",""))
+    PUBLICADOR_ACTIVO = True
+except Exception as e:
+    PUBLICADOR_ACTIVO = False
+    print(f"⚠️  Publicador no disponible: {e}")
+
+publicaciones_progreso = {"total": 0, "actual": 0, "resultados": [], "corriendo": False}
+
+
+@app.route("/api/categorias-ml")
+def api_categorias():
+    from publicador import CATEGORIAS_ML
+    return jsonify([{"nombre": k, "id": v} for k, v in CATEGORIAS_ML.items()])
+
+
+@app.route("/api/calcular-precio", methods=["POST"])
+def api_calcular_precio():
+    try:
+        from costos import CalculadoraCostos
+        datos = request.json
+        calc = CalculadoraCostos()
+        resultado = calc.calcular(
+            precio_venta=datos.get("precio_venta", 0),
+            costo_droppers=datos.get("costo_droppers", 0),
+            categoria=datos.get("categoria", "default"),
+            envio_gratis=datos.get("envio_gratis", False),
+        )
+        precio_sugerido = calc.calcular_precio_para_margen(
+            costo_droppers=datos.get("costo_droppers", 0),
+            margen_deseado_pct=datos.get("margen_pct", 25),
+            categoria=datos.get("categoria", "default"),
+            envio_gratis=datos.get("envio_gratis", False),
+        )
+        resultado["precio_sugerido"] = precio_sugerido
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
+@app.route("/api/publicar-masivo", methods=["POST"])
+def api_publicar_masivo():
+    global publicaciones_progreso
+    if not PUBLICADOR_ACTIVO:
+        return jsonify({"error": "Publicador no activo"})
+    if publicaciones_progreso["corriendo"]:
+        return jsonify({"error": "Ya hay una publicación en curso"})
+
+    datos = request.json
+    productos = datos.get("productos", [])
+    config = datos.get("config", {})
+
+    publicaciones_progreso = {"total": len(productos), "actual": 0, "resultados": [], "corriendo": True}
+
+    def callback(actual, total, resultado):
+        publicaciones_progreso["actual"] = actual
+        publicaciones_progreso["resultados"].append(resultado)
+        if actual >= total:
+            publicaciones_progreso["corriendo"] = False
+
+    threading.Thread(
+        target=publicador.publicar_masivo,
+        args=(productos, config, callback),
+        daemon=True
+    ).start()
+
+    return jsonify({"status": "publicando", "total": len(productos)})
+
+
+@app.route("/api/progreso-publicacion")
+def api_progreso():
+    return jsonify(publicaciones_progreso)
+
+
+@app.route("/publicar")
+def pagina_publicar():
+    return PUBLICAR_HTML
+
+
+# =============================================================
 #  ARRANQUE
 # =============================================================
 
@@ -854,3 +941,250 @@ def api_rechazar_venta(order_id):
     if not DROPPERS_ACTIVO:
         return jsonify({"ok": False})
     return jsonify(monitor_ventas.rechazar_venta(order_id))
+
+PUBLICAR_HTML = """<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ML Bot — Publicar Productos</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0d0f14;--surface:#161920;--surface2:#1e2230;--border:rgba(255,255,255,0.07);--text:#e8eaf0;--muted:#6b7280;--accent:#3b82f6;--accent2:#10b981;--warn:#f59e0b;--danger:#ef4444; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  header { border-bottom:1px solid var(--border); padding:18px 32px; display:flex; align-items:center; justify-content:space-between; }
+  .logo { font-size:15px; font-weight:600; }
+  main { max-width:900px; margin:0 auto; padding:32px 24px; }
+  h2 { font-size:20px; font-weight:600; margin-bottom:6px; }
+  .sub { font-size:13px; color:var(--muted); margin-bottom:32px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:20px; }
+  .card-title { font-size:13px; font-weight:600; margin-bottom:16px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); }
+  label { font-size:13px; font-weight:500; display:block; margin-bottom:6px; }
+  select, input[type=number], input[type=text] { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-size:13px; font-family:inherit; }
+  select:focus, input:focus { outline:none; border-color:var(--accent); }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); }
+  .toggle-row:last-child { border-bottom:none; }
+  .toggle-label { font-size:13px; font-weight:500; }
+  .toggle-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+  .toggle { position:relative; width:44px; height:24px; flex-shrink:0; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; inset:0; background:#374151; border-radius:24px; cursor:pointer; transition:.3s; }
+  .slider:before { content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; background:white; border-radius:50%; transition:.3s; }
+  input:checked + .slider { background:var(--accent2); }
+  input:checked + .slider:before { transform:translateX(20px); }
+  .calc-box { background:var(--surface2); border-radius:10px; padding:16px; margin-top:16px; }
+  .calc-row { display:flex; justify-content:space-between; font-size:13px; padding:4px 0; }
+  .calc-total { font-weight:600; font-size:14px; color:var(--accent2); border-top:1px solid var(--border); margin-top:8px; padding-top:8px; }
+  .btn { background:var(--accent); color:white; border:none; padding:12px 24px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; width:100%; }
+  .btn:hover { opacity:.85; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .btn-back { background:transparent; border:1px solid var(--border); color:var(--text); padding:8px 16px; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; text-decoration:none; display:inline-block; }
+  .progress-bar { height:8px; background:var(--surface2); border-radius:4px; overflow:hidden; margin-top:12px; }
+  .progress-fill { height:100%; background:var(--accent2); border-radius:4px; transition:width .3s; }
+  .resultado-item { padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; display:flex; gap:8px; align-items:center; }
+  .badge-ok { background:rgba(16,185,129,.15); color:#10b981; padding:2px 8px; border-radius:4px; font-size:11px; }
+  .badge-err { background:rgba(239,68,68,.15); color:#ef4444; padding:2px 8px; border-radius:4px; font-size:11px; }
+  .margen-warning { color:var(--warn); font-size:12px; margin-top:4px; }
+  .margen-ok { color:var(--accent2); font-size:12px; margin-top:4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">📦 Publicar Productos en ML</div>
+  <a href="/" class="btn-back">← Volver al dashboard</a>
+</header>
+<main>
+  <h2>Panel de Publicación Masiva</h2>
+  <p class="sub">Configurá los parámetros y el bot publica con títulos y precios optimizados por IA para el algoritmo de ML.</p>
+
+  <!-- PASO 1: Configuración -->
+  <div class="card">
+    <p class="card-title">1 — Configuración de publicación</p>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div>
+        <label>Categoría de Mercado Libre</label>
+        <select id="categoria" onchange="calcularPrecio()">
+          <option value="">Cargando categorías...</option>
+        </select>
+      </div>
+      <div>
+        <label>Costo en Droppers (ARS)</label>
+        <input type="number" id="costo" placeholder="ej: 5000" oninput="calcularPrecio()">
+      </div>
+    </div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div>
+        <label>Margen de ganancia deseado (%)</label>
+        <input type="number" id="margen" value="25" min="5" max="80" oninput="calcularPrecio()">
+        <div id="margen-estado" style="margin-top:4px"></div>
+      </div>
+      <div>
+        <label>Precio de venta estimado (ARS)</label>
+        <input type="number" id="precio-venta" placeholder="se calcula automático" oninput="calcularDesde('precio')">
+      </div>
+    </div>
+
+    <!-- Toggles -->
+    <div class="toggle-row">
+      <div>
+        <p class="toggle-label">🚚 Envío gratis</p>
+        <p class="toggle-sub">Aumenta el CTR un 35%. El costo se suma al precio automáticamente.</p>
+      </div>
+      <label class="toggle"><input type="checkbox" id="envio-gratis" onchange="calcularPrecio()"><span class="slider"></span></label>
+    </div>
+
+    <!-- Calculadora en tiempo real -->
+    <div class="calc-box" id="calc-box" style="display:none">
+      <p style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--muted)">DESGLOSE DE COSTOS</p>
+      <div class="calc-row"><span>Precio de venta</span><span id="c-precio">—</span></div>
+      <div class="calc-row"><span>Costo Droppers</span><span id="c-droppers" style="color:var(--danger)">—</span></div>
+      <div class="calc-row"><span id="c-comision-label">Comisión ML</span><span id="c-comision" style="color:var(--danger)">—</span></div>
+      <div class="calc-row"><span>IVA + IIBB</span><span id="c-impuestos" style="color:var(--danger)">—</span></div>
+      <div class="calc-row"><span>Costo envío</span><span id="c-envio" style="color:var(--danger)">—</span></div>
+      <div class="calc-row calc-total"><span>💚 Ganancia neta por venta</span><span id="c-ganancia">—</span></div>
+      <div class="calc-row" style="font-size:12px;color:var(--muted)"><span>Margen neto real</span><span id="c-margen-real">—</span></div>
+    </div>
+  </div>
+
+  <!-- PASO 2: Productos -->
+  <div class="card">
+    <p class="card-title">2 — Productos a publicar</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Pegá la lista de productos de Droppers en formato JSON, o ingresá uno manualmente.</p>
+    <textarea id="productos-json" rows="8" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;resize:vertical" placeholder='[
+  {
+    "titulo": "Auriculares Bluetooth JBL Tune 510BT",
+    "costo": 8500,
+    "stock": 5,
+    "imagenes": ["https://..."],
+    "atributos": []
+  }
+]'></textarea>
+    <button class="btn-back" style="margin-top:10px" onclick="cargarEjemplo()">Cargar ejemplo</button>
+  </div>
+
+  <!-- PASO 3: Publicar -->
+  <div class="card">
+    <p class="card-title">3 — Publicar</p>
+    <div id="preview-info" style="margin-bottom:16px;display:none">
+      <p style="font-size:13px;color:var(--muted)">Productos a publicar: <strong id="cant-productos">0</strong> · Precio promedio estimado: <strong id="precio-promedio">—</strong></p>
+    </div>
+    <button class="btn" id="btn-publicar" onclick="iniciarPublicacion()">🚀 Publicar con IA</button>
+
+    <!-- Progreso -->
+    <div id="seccion-progreso" style="display:none;margin-top:20px">
+      <p style="font-size:13px;margin-bottom:8px">Publicando... <span id="prog-texto">0 / 0</span></p>
+      <div class="progress-bar"><div class="progress-fill" id="prog-barra" style="width:0%"></div></div>
+      <div id="prog-resultados" style="margin-top:16px"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+let categoriasData = [];
+
+async function cargarCategorias() {
+  const r = await fetch('/api/categorias-ml');
+  const cats = await r.json();
+  categoriasData = cats;
+  const sel = document.getElementById('categoria');
+  sel.innerHTML = '<option value="">Seleccioná una categoría</option>' +
+    cats.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+}
+
+async function calcularPrecio() {
+  const costo = parseFloat(document.getElementById('costo').value) || 0;
+  const margen = parseFloat(document.getElementById('margen').value) || 25;
+  const categoria = document.getElementById('categoria').value || 'default';
+  const envioGratis = document.getElementById('envio-gratis').checked;
+  if (!costo) { document.getElementById('calc-box').style.display='none'; return; }
+
+  const r = await fetch('/api/calcular-precio', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({costo_droppers: costo, margen_pct: margen, categoria, envio_gratis: envioGratis,
+      precio_venta: parseFloat(document.getElementById('precio-venta').value) || 0})
+  });
+  const d = await r.json();
+
+  if (d.precio_sugerido) document.getElementById('precio-venta').value = d.precio_sugerido;
+
+  document.getElementById('calc-box').style.display = 'block';
+  document.getElementById('c-precio').textContent = '$' + (d.precio_sugerido||0).toLocaleString('es-AR');
+  document.getElementById('c-droppers').textContent = '-$' + costo.toLocaleString('es-AR');
+  document.getElementById('c-comision-label').textContent = `Comisión ML (${d.tasa_comision_pct||14}%)`;
+  document.getElementById('c-comision').textContent = '-$' + (d.comision_ml||0).toLocaleString('es-AR');
+  document.getElementById('c-impuestos').textContent = '-$' + ((d.iva_comision||0)+(d.iibb||0)).toLocaleString('es-AR');
+  document.getElementById('c-envio').textContent = envioGratis ? '-$' + (d.costo_envio||0).toLocaleString('es-AR') : '$0';
+  document.getElementById('c-ganancia').textContent = '$' + (d.ganancia_neta||0).toLocaleString('es-AR');
+  document.getElementById('c-margen-real').textContent = (d.margen_neto_pct||0) + '%';
+
+  const margenEl = document.getElementById('margen-estado');
+  if (d.margen_neto_pct < 10) margenEl.innerHTML = '<span class="margen-warning">⚠️ Margen muy bajo — considerá subir el precio</span>';
+  else if (d.margen_neto_pct < 20) margenEl.innerHTML = '<span class="margen-warning">⚡ Margen ajustado — útil para ganar volumen al inicio</span>';
+  else margenEl.innerHTML = '<span class="margen-ok">✅ Buen margen</span>';
+}
+
+function cargarEjemplo() {
+  document.getElementById('productos-json').value = JSON.stringify([
+    {"titulo": "Auriculares Bluetooth Inalámbricos con Micrófono", "costo": 8500, "stock": 10, "imagenes": [], "atributos": []},
+    {"titulo": "Cargador USB Carga Rápida 20W Universal", "costo": 3200, "stock": 15, "imagenes": [], "atributos": []}
+  ], null, 2);
+  document.getElementById('preview-info').style.display='block';
+  document.getElementById('cant-productos').textContent = '2';
+}
+
+async function iniciarPublicacion() {
+  let productos;
+  try { productos = JSON.parse(document.getElementById('productos-json').value); }
+  catch(e) { alert('El JSON de productos tiene un error. Verificalo.'); return; }
+  if (!productos.length) { alert('No hay productos para publicar.'); return; }
+
+  const cat = document.getElementById('categoria').value;
+  const catData = categoriasData.find(c => c.nombre === cat);
+  if (!cat || !catData) { alert('Seleccioná una categoría.'); return; }
+
+  const config = {
+    categoria_nombre: cat,
+    categoria_id: catData.id,
+    margen_pct: parseFloat(document.getElementById('margen').value) || 25,
+    envio_gratis: document.getElementById('envio-gratis').checked,
+    costo_droppers: parseFloat(document.getElementById('costo').value) || 0,
+  };
+
+  document.getElementById('btn-publicar').disabled = true;
+  document.getElementById('btn-publicar').textContent = '⏳ Publicando...';
+  document.getElementById('seccion-progreso').style.display = 'block';
+
+  await fetch('/api/publicar-masivo', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({productos, config})
+  });
+
+  // Polling del progreso
+  const intervalo = setInterval(async () => {
+    const r = await fetch('/api/progreso-publicacion');
+    const p = await r.json();
+    const pct = p.total > 0 ? (p.actual / p.total * 100) : 0;
+    document.getElementById('prog-texto').textContent = `${p.actual} / ${p.total}`;
+    document.getElementById('prog-barra').style.width = pct + '%';
+
+    const resEl = document.getElementById('prog-resultados');
+    resEl.innerHTML = p.resultados.map(r => `
+      <div class="resultado-item">
+        ${r.ok ? '<span class="badge-ok">✅ OK</span>' : '<span class="badge-err">❌ Error</span>'}
+        <span style="flex:1">${r.titulo || r.error || '...'}</span>
+        ${r.ok ? `<span style="color:var(--accent2);font-size:12px">$${r.precio?.toLocaleString('es-AR')} · ${r.margen_pct}% margen</span>` : ''}
+      </div>`).join('');
+
+    if (!p.corriendo && p.actual >= p.total && p.total > 0) {
+      clearInterval(intervalo);
+      document.getElementById('btn-publicar').disabled = false;
+      document.getElementById('btn-publicar').textContent = '🚀 Publicar con IA';
+    }
+  }, 2000);
+}
+
+cargarCategorias();
+</script>
+</html>"""
