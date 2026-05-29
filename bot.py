@@ -1233,5 +1233,5 @@ cargarCategorias();
 
 
 @app.route("/publicar")
-@app.route("/publicar")\ndef pagina_publicar():
+def pagina_publicar():
     return PUBLICAR_HTML
