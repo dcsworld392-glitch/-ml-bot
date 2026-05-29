@@ -669,8 +669,13 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
         <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:#3B6D11;border-top:0.5px solid #e5e3de;margin-top:6px;padding-top:6px"><span>💚 Ganancia neta</span><span id="pc-ganancia">—</span></div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#999;padding-top:3px"><span>Margen real</span><span id="pc-margen">—</span></div>
       </div>
-      <div style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Productos (JSON de Droppers)</label>
+      <!-- Comparación con ML -->
+      <div id="pub-ml-precio" style="display:none;background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+        <p style="font-size:11px;font-weight:600;color:#185FA5;margin-bottom:6px">📊 Comparación con Mercado Libre</p>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:#444">Precio mediano en ML (competencia)</span><span id="ml-precio-comp" style="font-weight:600;color:#185FA5">buscando...</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:#444">Tu precio sugerido</span><span id="ml-precio-tuyo" style="font-weight:600;color:#3B6D11">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;margin-top:4px;border-top:0.5px solid #B5D4F4;padding-top:6px"><span style="color:#444">Posición estimada</span><span id="ml-posicion">—</span></div>
+      </div>
         <textarea id="pub-json" rows="6" placeholder='[{"titulo":"Auriculares Bluetooth","costo":8500,"stock":10,"imagenes":[],"atributos":[]}]' style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:10px 12px;color:#1a1a1a;font-size:12px;font-family:'JetBrains Mono',monospace;resize:vertical"></textarea>
         <button onclick="pubEjemplo()" style="margin-top:6px;font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid #e5e3de;background:#F7F6F3;color:#666;cursor:pointer;font-family:'Inter',sans-serif">Cargar ejemplo</button>
       </div>
@@ -715,22 +720,62 @@ async function pubCalcPrecio() {
   const slider = document.getElementById('pub-envio-slider');
   slider.style.background = envio ? '#639922' : '#d1d5db';
   if (!costo) { document.getElementById('pub-calc').style.display='none'; return; }
-  const r = await fetch('/api/calcular-precio', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({costo_droppers:costo,margen_pct:margen,categoria:cat,envio_gratis:envio,precio_venta:0})});
+
+  // Calcular precio sugerido primero
+  const r = await fetch('/api/calcular-precio', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({costo_droppers:costo, margen_pct:margen, categoria:cat, envio_gratis:envio, precio_venta:0})
+  });
   const d = await r.json();
-  if (d.precio_sugerido) document.getElementById('pub-precio').value = d.precio_sugerido;
+  const precioSugerido = d.precio_sugerido || 0;
+
+  // Ahora calcular el desglose con el precio sugerido real
+  const r2 = await fetch('/api/calcular-precio', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({costo_droppers:costo, margen_pct:margen, categoria:cat, envio_gratis:envio, precio_venta:precioSugerido})
+  });
+  const d2 = await r2.json();
+
+  document.getElementById('pub-precio').value = precioSugerido;
   document.getElementById('pub-calc').style.display='block';
-  document.getElementById('pc-precio').textContent='$'+(d.precio_sugerido||0).toLocaleString('es-AR');
+  document.getElementById('pc-precio').textContent='$'+precioSugerido.toLocaleString('es-AR');
   document.getElementById('pc-costo').textContent='-$'+costo.toLocaleString('es-AR');
-  document.getElementById('pc-com-label').textContent=`Comisión ML (${d.tasa_comision_pct||14}%)`;
-  document.getElementById('pc-comision').textContent='-$'+(d.comision_ml||0).toLocaleString('es-AR');
-  document.getElementById('pc-impuestos').textContent='-$'+((d.iva_comision||0)+(d.iibb||0)).toLocaleString('es-AR');
-  document.getElementById('pc-envio').textContent=envio?'-$'+(d.costo_envio||0).toLocaleString('es-AR'):'$0';
-  document.getElementById('pc-ganancia').textContent='$'+(d.ganancia_neta||0).toLocaleString('es-AR');
-  document.getElementById('pc-margen').textContent=(d.margen_neto_pct||0)+'%';
+  document.getElementById('pc-com-label').textContent=`Comisión ML (${d2.tasa_comision_pct||14}%)`;
+  document.getElementById('pc-comision').textContent='-$'+(d2.comision_ml||0).toLocaleString('es-AR');
+  document.getElementById('pc-impuestos').textContent='-$'+((d2.iva_comision||0)+(d2.iibb||0)).toLocaleString('es-AR');
+  document.getElementById('pc-envio').textContent=envio?'-$'+(d2.costo_envio||2000).toLocaleString('es-AR'):'$0';
+  document.getElementById('pc-ganancia').textContent='$'+(d2.ganancia_neta||0).toLocaleString('es-AR');
+  document.getElementById('pc-margen').textContent=(d2.margen_neto_pct||0)+'%';
+
   const me = document.getElementById('pub-margen-estado');
-  if (d.margen_neto_pct < 10) me.innerHTML='<span style="color:#A32D2D">⚠️ Margen muy bajo</span>';
-  else if (d.margen_neto_pct < 20) me.innerHTML='<span style="color:#854F0B">⚡ Margen ajustado</span>';
+  if ((d2.margen_neto_pct||0) < 10) me.innerHTML='<span style="color:#A32D2D">⚠️ Margen muy bajo</span>';
+  else if ((d2.margen_neto_pct||0) < 20) me.innerHTML='<span style="color:#854F0B">⚡ Margen ajustado</span>';
   else me.innerHTML='<span style="color:#3B6D11">✅ Buen margen</span>';
+
+  // Buscar precio en ML para comparar
+  const titulo = (() => { try { return JSON.parse(document.getElementById('pub-json').value||'[]')[0]?.titulo||''; } catch(e){return '';} })();
+  if (titulo && cat) {
+    document.getElementById('pub-ml-precio').style.display='block';
+    document.getElementById('ml-precio-comp').textContent='buscando...';
+    document.getElementById('ml-precio-tuyo').textContent='$'+precioSugerido.toLocaleString('es-AR');
+    try {
+      const rm = await fetch('/api/precio-ml?titulo='+encodeURIComponent(titulo.substring(0,40))+'&categoria='+encodeURIComponent(cat));
+      const dm = await rm.json();
+      if (dm.precio_mediano) {
+        document.getElementById('ml-precio-comp').textContent='$'+dm.precio_mediano.toLocaleString('es-AR');
+        const diff = ((precioSugerido - dm.precio_mediano) / dm.precio_mediano * 100).toFixed(1);
+        const pos = diff <= 0 ? `<span style="color:#3B6D11">✅ ${Math.abs(diff)}% más barato que la competencia</span>`
+                   : diff <= 5 ? `<span style="color:#854F0B">⚡ ${diff}% más caro — competitivo igual</span>`
+                   : `<span style="color:#A32D2D">⚠️ ${diff}% más caro — considerá bajar el precio</span>`;
+        document.getElementById('ml-posicion').innerHTML=pos;
+      } else {
+        document.getElementById('ml-precio-comp').textContent='Sin datos';
+        document.getElementById('ml-posicion').innerHTML='<span style="color:#999">Producto nuevo en ML</span>';
+      }
+    } catch(e) {
+      document.getElementById('ml-precio-comp').textContent='No disponible';
+    }
+  }
 }
 
 function pubEjemplo() {
@@ -899,6 +944,34 @@ except Exception as e:
     print(f"⚠️  Publicador no disponible: {e}")
 
 publicaciones_progreso = {"total": 0, "actual": 0, "resultados": [], "corriendo": False}
+
+
+@app.route("/api/precio-ml")
+def api_precio_ml():
+    try:
+        titulo = request.args.get("titulo", "")
+        categoria_nombre = request.args.get("categoria", "")
+        from publicador import CATEGORIAS_ML
+        cat_id = CATEGORIAS_ML.get(categoria_nombre, "")
+        resultados = sistema.ml.get("/sites/MLA/search", params={
+            "q": titulo[:40],
+            "category": cat_id,
+            "limit": 10,
+            "sort": "relevance",
+        })
+        precios = [i["price"] for i in resultados.get("results", []) if i.get("price")]
+        if not precios:
+            return jsonify({"precio_mediano": None})
+        precios_sorted = sorted(precios)
+        mediana = precios_sorted[len(precios_sorted) // 2]
+        return jsonify({
+            "precio_mediano": round(mediana, 2),
+            "precio_minimo":  round(precios_sorted[0], 2),
+            "precio_maximo":  round(precios_sorted[-1], 2),
+            "cantidad":       len(precios),
+        })
+    except Exception as e:
+        return jsonify({"precio_mediano": None, "error": str(e)})
 
 
 @app.route("/api/categorias-ml")
