@@ -831,11 +831,6 @@ def api_progreso():
     return jsonify(publicaciones_progreso)
 
 
-@app.route("/publicar")
-def pagina_publicar():
-    return PUBLICAR_HTML
-
-
 # =============================================================
 #  RUTAS DE PROMOCIONES
 # =============================================================
@@ -1235,3 +1230,8 @@ async function iniciarPublicacion() {
 cargarCategorias();
 </script>
 </html>"""
+
+
+@app.route("/publicar")
+def pagina_publicar():
+    return PUBLICAR_HTML
