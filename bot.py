@@ -553,7 +553,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
   </div>
   <div class="hdr-right">
     <span class="pill pill-green">● Bot activo</span>
-    <a href="/publicar" class="pill pill-blue">📦 Publicar productos</a>
+    <a href="#" onclick="togglePublicar()" class="pill pill-blue">📦 Publicar productos</a>
     <span class="pill pill-time" id="last-update">Cargando...</span>
   </div>
 </header>
@@ -619,12 +619,146 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
     <div id="lista-pendientes"></div>
   </div>
 
+  <!-- PANEL DE PUBLICACIÓN (toggle) -->
+  <div id="panel-publicar" style="display:none;margin-bottom:28px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="sec-label" style="margin-bottom:0">📦 Publicar productos en ML</div>
+      <button class="mini-btn" onclick="togglePublicar()">✕ Cerrar</button>
+    </div>
+    <div class="panel">
+      <div class="g2" style="margin-bottom:16px">
+        <div>
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría de ML</label>
+          <select id="pub-categoria" onchange="pubCalcPrecio()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <option value="">Cargando...</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Costo en Droppers (ARS)</label>
+          <input type="number" id="pub-costo" placeholder="ej: 5000" oninput="pubCalcPrecio()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+        </div>
+      </div>
+      <div class="g2" style="margin-bottom:16px">
+        <div>
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen de ganancia (%)</label>
+          <input type="number" id="pub-margen" value="25" min="5" max="80" oninput="pubCalcPrecio()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+          <div id="pub-margen-estado" style="margin-top:4px;font-size:11px"></div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Precio de venta estimado</label>
+          <input type="number" id="pub-precio" placeholder="se calcula automático" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #f0ede8;border-bottom:0.5px solid #f0ede8;margin-bottom:14px">
+        <div>
+          <p style="font-size:12px;font-weight:500">🚚 Envío gratis</p>
+          <p style="font-size:11px;color:#999">Aumenta el CTR. El costo se suma al precio.</p>
+        </div>
+        <label style="position:relative;width:44px;height:24px;flex-shrink:0">
+          <input type="checkbox" id="pub-envio" onchange="pubCalcPrecio()" style="opacity:0;width:0;height:0">
+          <span id="pub-envio-slider" onclick="document.getElementById('pub-envio').click()" style="position:absolute;inset:0;background:#d1d5db;border-radius:24px;cursor:pointer;transition:.3s"></span>
+        </label>
+      </div>
+      <div id="pub-calc" style="display:none;background:#F7F6F3;border-radius:8px;padding:14px;margin-bottom:14px">
+        <p style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:8px">Desglose de costos</p>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Precio de venta</span><span id="pc-precio">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Costo Droppers</span><span id="pc-costo" style="color:#A32D2D">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span id="pc-com-label">Comisión ML</span><span id="pc-comision" style="color:#A32D2D">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>IVA + IIBB</span><span id="pc-impuestos" style="color:#A32D2D">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Envío</span><span id="pc-envio" style="color:#A32D2D">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:#3B6D11;border-top:0.5px solid #e5e3de;margin-top:6px;padding-top:6px"><span>💚 Ganancia neta</span><span id="pc-ganancia">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#999;padding-top:3px"><span>Margen real</span><span id="pc-margen">—</span></div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Productos (JSON de Droppers)</label>
+        <textarea id="pub-json" rows="6" placeholder='[{"titulo":"Auriculares Bluetooth","costo":8500,"stock":10,"imagenes":[],"atributos":[]}]' style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:10px 12px;color:#1a1a1a;font-size:12px;font-family:'JetBrains Mono',monospace;resize:vertical"></textarea>
+        <button onclick="pubEjemplo()" style="margin-top:6px;font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid #e5e3de;background:#F7F6F3;color:#666;cursor:pointer;font-family:'Inter',sans-serif">Cargar ejemplo</button>
+      </div>
+      <button id="btn-pub" onclick="iniciarPublicacion()" style="width:100%;background:#1a1a1a;color:#fff;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">🚀 Publicar con IA</button>
+      <div id="pub-progreso" style="display:none;margin-top:16px">
+        <p style="font-size:12px;margin-bottom:6px">Publicando... <span id="pub-prog-txt">0/0</span></p>
+        <div style="height:6px;background:#e5e3de;border-radius:3px;overflow:hidden"><div id="pub-prog-barra" style="height:100%;background:#3B6D11;border-radius:3px;transition:width .3s;width:0%"></div></div>
+        <div id="pub-resultados" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
   <div style="text-align:center;padding-bottom:32px">
     <button class="cycle-btn" onclick="cicloCompleto()">Ejecutar ciclo completo</button>
   </div>
 </main>
 
 <script>
+let pubCategorias = [];
+
+function togglePublicar() {
+  const p = document.getElementById('panel-publicar');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  if (p.style.display === 'block') {
+    p.scrollIntoView({behavior:'smooth'});
+    if (!pubCategorias.length) cargarPubCategorias();
+  }
+}
+
+async function cargarPubCategorias() {
+  const r = await fetch('/api/categorias-ml');
+  pubCategorias = await r.json();
+  const sel = document.getElementById('pub-categoria');
+  sel.innerHTML = '<option value="">Seleccioná una categoría</option>' + pubCategorias.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
+}
+
+async function pubCalcPrecio() {
+  const costo = parseFloat(document.getElementById('pub-costo').value)||0;
+  const margen = parseFloat(document.getElementById('pub-margen').value)||25;
+  const cat = document.getElementById('pub-categoria').value||'default';
+  const envio = document.getElementById('pub-envio').checked;
+  const slider = document.getElementById('pub-envio-slider');
+  slider.style.background = envio ? '#639922' : '#d1d5db';
+  if (!costo) { document.getElementById('pub-calc').style.display='none'; return; }
+  const r = await fetch('/api/calcular-precio', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({costo_droppers:costo,margen_pct:margen,categoria:cat,envio_gratis:envio,precio_venta:0})});
+  const d = await r.json();
+  if (d.precio_sugerido) document.getElementById('pub-precio').value = d.precio_sugerido;
+  document.getElementById('pub-calc').style.display='block';
+  document.getElementById('pc-precio').textContent='$'+(d.precio_sugerido||0).toLocaleString('es-AR');
+  document.getElementById('pc-costo').textContent='-$'+costo.toLocaleString('es-AR');
+  document.getElementById('pc-com-label').textContent=`Comisión ML (${d.tasa_comision_pct||14}%)`;
+  document.getElementById('pc-comision').textContent='-$'+(d.comision_ml||0).toLocaleString('es-AR');
+  document.getElementById('pc-impuestos').textContent='-$'+((d.iva_comision||0)+(d.iibb||0)).toLocaleString('es-AR');
+  document.getElementById('pc-envio').textContent=envio?'-$'+(d.costo_envio||0).toLocaleString('es-AR'):'$0';
+  document.getElementById('pc-ganancia').textContent='$'+(d.ganancia_neta||0).toLocaleString('es-AR');
+  document.getElementById('pc-margen').textContent=(d.margen_neto_pct||0)+'%';
+  const me = document.getElementById('pub-margen-estado');
+  if (d.margen_neto_pct < 10) me.innerHTML='<span style="color:#A32D2D">⚠️ Margen muy bajo</span>';
+  else if (d.margen_neto_pct < 20) me.innerHTML='<span style="color:#854F0B">⚡ Margen ajustado</span>';
+  else me.innerHTML='<span style="color:#3B6D11">✅ Buen margen</span>';
+}
+
+function pubEjemplo() {
+  document.getElementById('pub-json').value = JSON.stringify([{"titulo":"Auriculares Bluetooth Inalámbricos con Micrófono","costo":8500,"stock":10,"imagenes":[],"atributos":[]},{"titulo":"Cargador USB Carga Rápida 20W Universal","costo":3200,"stock":15,"imagenes":[],"atributos":[]}],null,2);
+}
+
+async function iniciarPublicacion() {
+  let productos;
+  try { productos = JSON.parse(document.getElementById('pub-json').value); } catch(e) { alert('JSON inválido'); return; }
+  if (!productos?.length) { alert('No hay productos'); return; }
+  const cat = document.getElementById('pub-categoria').value;
+  const catData = pubCategorias.find(c=>c.nombre===cat);
+  if (!cat||!catData) { alert('Seleccioná una categoría'); return; }
+  const config = {categoria_nombre:cat,categoria_id:catData.id,margen_pct:parseFloat(document.getElementById('pub-margen').value)||25,envio_gratis:document.getElementById('pub-envio').checked,costo_droppers:parseFloat(document.getElementById('pub-costo').value)||0};
+  document.getElementById('btn-pub').disabled=true;
+  document.getElementById('btn-pub').textContent='⏳ Publicando...';
+  document.getElementById('pub-progreso').style.display='block';
+  await fetch('/api/publicar-masivo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productos,config})});
+  const iv = setInterval(async()=>{
+    const r=await fetch('/api/progreso-publicacion');
+    const p=await r.json();
+    const pct=p.total>0?(p.actual/p.total*100):0;
+    document.getElementById('pub-prog-txt').textContent=`${p.actual}/${p.total}`;
+    document.getElementById('pub-prog-barra').style.width=pct+'%';
+    document.getElementById('pub-resultados').innerHTML=p.resultados.map(r=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:0.5px solid #f0ede8;font-size:12px"><span style="background:${r.ok?'#EAF3DE':'#FCEBEB'};color:${r.ok?'#3B6D11':'#A32D2D'};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">${r.ok?'OK':'Error'}</span><span style="flex:1">${r.titulo||r.error||'...'}</span>${r.ok?`<span style="color:#3B6D11;font-size:11px">$${r.precio?.toLocaleString('es-AR')} · ${r.margen_pct}%</span>`:''}</div>`).join('');
+    if (!p.corriendo&&p.actual>=p.total&&p.total>0){clearInterval(iv);document.getElementById('btn-pub').disabled=false;document.getElementById('btn-pub').textContent='🚀 Publicar con IA';}
+  },2000);
+}
 async function cargarPendientes(){
   const r=await fetch('/api/ventas-pendientes');
   const v=await r.json();
