@@ -474,250 +474,242 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ML Bot — Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Simple's — Panel de Ventas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0d0f14;
-    --surface: #161920;
-    --surface2: #1e2230;
-    --border: rgba(255,255,255,0.07);
-    --text: #e8eaf0;
-    --muted: #6b7280;
-    --accent: #3b82f6;
-    --accent2: #10b981;
-    --warn: #f59e0b;
-    --danger: #ef4444;
-    --mono: 'DM Mono', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-  header { border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
-  .logo { font-size: 15px; font-weight: 600; letter-spacing: -.3px; display: flex; align-items: center; gap: 8px; }
-  .dot { width: 8px; height: 8px; background: var(--accent2); border-radius: 50%; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  .status-badge { font-size: 12px; font-family: var(--mono); background: rgba(16,185,129,.12); color: var(--accent2); border: 1px solid rgba(16,185,129,.2); padding: 4px 12px; border-radius: 20px; }
-  main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-  .card-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 10px; }
-  .metric-value { font-size: 28px; font-weight: 600; letter-spacing: -1px; }
-  .metric-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .green { color: var(--accent2); }
-  .blue { color: var(--accent); }
-  .amber { color: var(--warn); }
-  .section-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; letter-spacing: -.2px; }
-  .log-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-  .log-item:last-child { border-bottom: none; }
-  .log-time { font-family: var(--mono); font-size: 11px; color: var(--muted); min-width: 42px; margin-top: 2px; }
-  .log-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex-shrink: 0; }
-  .btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; }
-  .btn:hover { opacity: .85; }
-  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-  .btn-outline:hover { background: var(--surface2); }
-  .sugerencia { background: var(--surface2); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
-  .sug-titulo { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-  .sug-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 8px; }
-  .tags { display: flex; gap: 6px; }
-  .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-family: var(--mono); }
-  .tag-alto { background: rgba(239,68,68,.15); color: #fca5a5; }
-  .tag-medio { background: rgba(245,158,11,.15); color: #fcd34d; }
-  .tag-bajo { background: rgba(107,114,128,.15); color: #9ca3af; }
-  .loading { color: var(--muted); font-size: 13px; font-style: italic; }
-  @media (max-width: 700px) { .grid-4 { grid-template-columns: 1fr 1fr; } .grid-2 { grid-template-columns: 1fr; } }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#F7F6F3;color:#1a1a1a;min-height:100vh}
+header{background:#fff;border-bottom:0.5px solid #e5e3de;padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:8px}
+.brand-dot{width:9px;height:9px;background:#639922;border-radius:50%;animation:pulse 2.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.brand-name{font-size:16px;font-weight:600;color:#1a1a1a;letter-spacing:-0.3px}
+.brand-apos{color:#639922}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.pill{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.pill-green{background:#EAF3DE;color:#3B6D11;border:0.5px solid #C0DD97}
+.pill-blue{background:#E6F1FB;color:#185FA5;border:0.5px solid #B5D4F4;cursor:pointer}
+.pill-time{background:#F7F6F3;color:#888;border:0.5px solid #e5e3de;font-size:10px;font-family:'JetBrains Mono',monospace}
+main{max-width:1120px;margin:0 auto;padding:28px 24px}
+.sec-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.mc{background:#fff;border:0.5px solid #e5e3de;border-radius:10px;padding:14px 16px}
+.mc-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:8px}
+.mc-val{font-size:22px;font-weight:600;letter-spacing:-0.8px;color:#1a1a1a}
+.mc-sub{font-size:11px;color:#999;margin-top:3px}
+.green{color:#3B6D11}.blue{color:#185FA5}.amber{color:#854F0B}.red{color:#A32D2D}
+.panel{background:#fff;border:0.5px solid #e5e3de;border-radius:10px;padding:16px 18px}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.panel-title{font-size:12px;font-weight:600;color:#1a1a1a;text-transform:uppercase;letter-spacing:.5px}
+.mini-btn{font-size:11px;padding:4px 10px;border-radius:8px;border:0.5px solid #e5e3de;background:#F7F6F3;color:#666;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500}
+.mini-btn:hover{background:#eee}
+.sale-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid #f0ede8}
+.sale-row:last-child{border-bottom:none}
+.sale-thumb{width:38px;height:38px;border-radius:7px;background:#F7F6F3;border:0.5px solid #e5e3de;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:16px}
+.sale-name{font-size:12px;font-weight:500;color:#1a1a1a;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.sale-meta{font-size:11px;color:#999}
+.sale-gain{text-align:right;flex-shrink:0}
+.sale-gain-val{font-size:12px;font-weight:600;color:#3B6D11}
+.sale-pct{font-size:10px;color:#999}
+.loading{font-size:12px;color:#bbb;font-style:italic;padding:8px 0}
+.alert-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:0.5px solid #f0ede8}
+.alert-row:last-child{border-bottom:none}
+.alert-dot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.dot-red{background:#E24B4A}.dot-amber{background:#EF9F27}.dot-green{background:#639922}
+.alert-txt{font-size:12px;font-weight:500;color:#1a1a1a;margin-bottom:2px}
+.alert-sub{font-size:11px;color:#999}
+.resolve-btn{font-size:10px;padding:3px 8px;border-radius:6px;border:0.5px solid #B5D4F4;background:#E6F1FB;color:#185FA5;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'Inter',sans-serif}
+.promo-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid #f0ede8}
+.promo-row:last-child{border-bottom:none}
+.badge-off{background:#FCEBEB;color:#A32D2D;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;flex-shrink:0}
+.badge-ok{background:#EAF3DE;color:#3B6D11;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;flex-shrink:0}
+.pending-card{background:#FAEEDA;border:0.5px solid #FAC775;border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.pending-title{font-size:12px;font-weight:600;color:#633806;margin-bottom:4px}
+.pending-meta{font-size:11px;color:#854F0B;margin-bottom:10px;line-height:1.5}
+.btn-approve{background:#3B6D11;color:#EAF3DE;border:none;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.btn-approve:hover{background:#2d5209}
+.btn-ignore{background:transparent;color:#854F0B;border:0.5px solid #FAC775;padding:6px 10px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif}
+.log-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:0.5px solid #f0ede8;font-size:11px}
+.log-item:last-child{border-bottom:none}
+.log-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:#bbb;min-width:38px;margin-top:1px}
+.log-dot-sm{width:5px;height:5px;border-radius:50%;background:#185FA5;margin-top:4px;flex-shrink:0}
+.sug-item{background:#F7F6F3;border-radius:8px;padding:12px 14px;margin-bottom:8px}
+.sug-title{font-size:12px;font-weight:600;color:#1a1a1a;margin-bottom:3px}
+.sug-desc{font-size:11px;color:#666;line-height:1.5;margin-bottom:7px}
+.tag{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:500}
+.tag-alto{background:#FCEBEB;color:#A32D2D}.tag-medio{background:#FAEEDA;color:#854F0B}.tag-bajo{background:#F7F6F3;color:#888;border:0.5px solid #e5e3de}
+.cycle-btn{background:#1a1a1a;color:#fff;border:none;padding:10px 24px;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif}
+.cycle-btn:hover{background:#333}
+@media(max-width:700px){.g4{grid-template-columns:1fr 1fr}.g2,.g3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header>
-  <div class="logo"><div class="dot"></div> ML Bot Dashboard</div>
-  <div style="display:flex;gap:10px;align-items:center">
-    <a href="/publicar" style="font-size:12px;font-weight:500;background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);padding:6px 14px;border-radius:8px;text-decoration:none">📦 Publicar productos</a>
-    <span class="status-badge" id="last-update">Cargando...</span>
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Simple<span class="brand-apos">'</span>s</span>
+  </div>
+  <div class="hdr-right">
+    <span class="pill pill-green">● Bot activo</span>
+    <a href="/publicar" class="pill pill-blue">📦 Publicar productos</a>
+    <span class="pill pill-time" id="last-update">Cargando...</span>
   </div>
 </header>
+
 <main>
-  <!-- FILA 1: Dinero en tiempo real -->
-  <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px">💰 Ingresos</p>
-  <div class="grid-4" style="margin-bottom:28px">
-    <div class="card"><p class="card-title">Hoy</p><p class="metric-value green" id="m-hoy">—</p><p class="metric-sub" id="m-hoy-ventas">— ventas</p></div>
-    <div class="card"><p class="card-title">Ayer</p><p class="metric-value" id="m-ayer">—</p><p class="metric-sub" id="m-ayer-ventas">— ventas</p></div>
-    <div class="card"><p class="card-title">Últimos 30 días</p><p class="metric-value blue" id="m-ingresos">—</p><p class="metric-sub" id="m-ventas">— órdenes</p></div>
-    <div class="card"><p class="card-title">Ticket promedio</p><p class="metric-value amber" id="m-ticket">—</p><p class="metric-sub">por venta</p></div>
+  <div class="sec-label">💰 Ingresos</div>
+  <div class="g4">
+    <div class="mc"><p class="mc-label">Hoy</p><p class="mc-val green" id="m-hoy">—</p><p class="mc-sub" id="m-hoy-v">— ventas</p></div>
+    <div class="mc"><p class="mc-label">Ayer</p><p class="mc-val" id="m-ayer">—</p><p class="mc-sub" id="m-ayer-v">— ventas</p></div>
+    <div class="mc"><p class="mc-label">Últimos 30 días</p><p class="mc-val blue" id="m-30d">—</p><p class="mc-sub" id="m-30d-v">— órdenes</p></div>
+    <div class="mc"><p class="mc-label">Ticket promedio</p><p class="mc-val amber" id="m-ticket">—</p><p class="mc-sub">por venta</p></div>
   </div>
 
-  <!-- FILA 1b: Ganancia neta -->
-  <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px">💚 Ganancia neta (después de impuestos y comisiones)</p>
-  <div class="grid-4" style="margin-bottom:28px">
-    <div class="card"><p class="card-title">Ganancia hoy</p><p class="metric-value green" id="m-gan-hoy">—</p><p class="metric-sub">neto real</p></div>
-    <div class="card"><p class="card-title">Ganancia ayer</p><p class="metric-value" id="m-gan-ayer">—</p><p class="metric-sub">neto real</p></div>
-    <div class="card"><p class="card-title">Ganancia 30 días</p><p class="metric-value blue" id="m-gan-30d">—</p><p class="metric-sub">neto real</p></div>
-    <div class="card"><p class="card-title">Margen estimado</p><p class="metric-value amber" id="m-margen">—</p><p class="metric-sub">% promedio</p></div>
+  <div class="sec-label">💚 Ganancia neta real (después de impuestos y comisiones)</div>
+  <div class="g4">
+    <div class="mc"><p class="mc-label">Ganancia hoy</p><p class="mc-val green" id="m-gan-hoy">—</p><p class="mc-sub">neto</p></div>
+    <div class="mc"><p class="mc-label">Ganancia ayer</p><p class="mc-val" id="m-gan-ayer">—</p><p class="mc-sub">neto</p></div>
+    <div class="mc"><p class="mc-label">Ganancia 30 días</p><p class="mc-val blue" id="m-gan-30d">—</p><p class="mc-sub">neto</p></div>
+    <div class="mc"><p class="mc-label">Margen promedio</p><p class="mc-val amber" id="m-margen">—</p><p class="mc-sub">% estimado</p></div>
   </div>
 
-  <!-- FILA 2: Feed de ventas + Actividad -->
-  <div class="grid-2" style="margin-bottom:28px">
-    <div class="card">
-      <p class="section-title">🛒 Ventas recientes</p>
-      <div id="feed-ventas"><p class="loading">Sin ventas aún. Las ventas aparecen acá en tiempo real.</p></div>
+  <div class="g2">
+    <div class="panel">
+      <div class="panel-hdr"><span class="panel-title">Ventas recientes</span><span style="font-size:10px;color:#bbb">actualiza cada 30s</span></div>
+      <div id="feed-ventas"><p class="loading">Sin ventas aún. Aparecen acá en tiempo real.</p></div>
     </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <p class="section-title">⚡ Actividad del bot</p>
-        <button class="btn btn-outline" style="padding:6px 12px;font-size:12px" onclick="procesarPreguntas()">🔄 Procesar preguntas</button>
+    <div>
+      <div class="panel" style="margin-bottom:10px">
+        <div class="panel-hdr">
+          <span class="panel-title">Alertas — requieren atención</span>
+        </div>
+        <div id="alertas"><p class="loading">Sin alertas pendientes ✓</p></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr">
+          <span class="panel-title">Promociones activas</span>
+          <button class="mini-btn" onclick="analizarPromociones()">Analizar</button>
+        </div>
+        <div id="promociones"><p class="loading">Presioná "Analizar" para ver sugerencias.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="panel-title">Actividad del bot</span>
+        <button class="mini-btn" onclick="procesarPreguntas()">🔄 Procesar preguntas</button>
       </div>
       <div id="actividad"><p class="loading">Sin actividad aún.</p></div>
     </div>
-  </div>
-
-  <!-- FILA 3: Sugerencias IA -->
-  <div class="grid-2" style="margin-bottom:28px">
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <p class="section-title">✨ Sugerencias de la IA</p>
-        <button class="btn" style="padding:6px 12px;font-size:12px" onclick="obtenerSugerencias()">Analizar</button>
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="panel-title">Sugerencias de la IA</span>
+        <button class="mini-btn" onclick="obtenerSugerencias()">✨ Analizar</button>
       </div>
-      <div id="sugerencias"><p class="loading">Presioná "Analizar" para recibir recomendaciones.</p></div>
-    </div>
-    <div class="card">
-      <p class="section-title">🚨 Alertas — Requieren atención</p>
-      <div id="alertas"><p class="loading">Sin alertas pendientes. ✅</p></div>
+      <div id="sugerencias"><p class="loading">Presioná "Analizar" para recomendaciones de negocio.</p></div>
     </div>
   </div>
 
-  <div style="text-align:center;margin-top:12px">
-    <button class="btn btn-outline" onclick="cicloCompleto()">🤖 Ejecutar ciclo completo ahora</button>
-  </div>
-
-  <!-- Ventas pendientes de aprobación -->
-  <div id="seccion-pendientes" style="margin-top:28px;display:none">
-    <p style="font-size:14px;font-weight:600;margin-bottom:14px">⏳ Ventas pendientes — Aprobá para pedir en Droppers</p>
+  <div id="seccion-pendientes" style="display:none;margin-bottom:20px">
+    <div class="sec-label">⏳ Ventas pendientes — aprobá para pedir en Droppers</div>
     <div id="lista-pendientes"></div>
+  </div>
+
+  <div style="text-align:center;padding-bottom:32px">
+    <button class="cycle-btn" onclick="cicloCompleto()">Ejecutar ciclo completo</button>
   </div>
 </main>
 
 <script>
-async function cargarPendientes() {
-  const r = await fetch('/api/ventas-pendientes');
-  const ventas = await r.json();
-  const seccion = document.getElementById('seccion-pendientes');
-  const lista = document.getElementById('lista-pendientes');
-  if (!ventas.length) { seccion.style.display='none'; return; }
-  seccion.style.display='block';
-  lista.innerHTML = ventas.map(v => `
-    <div style="background:var(--surface2);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:16px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
-        <div style="flex:1">
-          <p style="font-size:13px;font-weight:600;margin:0 0 4px">${v.producto}</p>
-          <p style="font-size:12px;color:var(--muted);margin:0 0 2px">👤 ${v.comprador} · 📍 ${v.ciudad}, ${v.provincia}</p>
-          <p style="font-size:12px;color:var(--muted);margin:0">🏠 ${v.direccion} (CP: ${v.cp}) · 📦 x${v.cantidad}</p>
-          <p style="font-size:13px;font-weight:600;color:#10b981;margin:6px 0 0">💰 $${v.total_ml?.toLocaleString('es-AR')} · ${v.hora}</p>
-        </div>
-        <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
-          <button onclick="aprobarVenta('${v.order_id}', this)" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">✅ Aprobar y pedir en Droppers</button>
-          <button onclick="rechazarVenta('${v.order_id}')" style="background:transparent;color:var(--muted);border:1px solid var(--border);padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer">✗</button>
-        </div>
+async function cargarPendientes(){
+  const r=await fetch('/api/ventas-pendientes');
+  const v=await r.json();
+  const s=document.getElementById('seccion-pendientes');
+  const l=document.getElementById('lista-pendientes');
+  if(!v.length){s.style.display='none';return;}
+  s.style.display='block';
+  l.innerHTML=v.map(x=>`
+    <div class="pending-card">
+      <p class="pending-title">Nueva venta · ${x.hora}</p>
+      <p class="pending-meta">${x.producto}<br>👤 ${x.comprador} · 📍 ${x.ciudad}, ${x.provincia}<br>🏠 ${x.direccion} (CP: ${x.cp}) · 📦 x${x.cantidad} · <strong>$${x.total_ml?.toLocaleString('es-AR')}</strong></p>
+      <div style="display:flex;gap:8px">
+        <button class="btn-approve" onclick="aprobarVenta('${x.order_id}',this)">Aprobar y pedir en Droppers</button>
+        <button class="btn-ignore" onclick="rechazarVenta('${x.order_id}')">Ignorar</button>
       </div>
     </div>`).join('');
 }
 
-async function aprobarVenta(orderId, btn) {
-  btn.textContent = '⏳ Procesando...';
-  btn.disabled = true;
-  await fetch('/api/aprobar-venta/' + orderId, {method:'POST'});
-  setTimeout(cargarPendientes, 3000);
+async function aprobarVenta(id,btn){btn.textContent='Procesando...';btn.disabled=true;await fetch('/api/aprobar-venta/'+id,{method:'POST'});setTimeout(cargarPendientes,3000);}
+async function rechazarVenta(id){await fetch('/api/rechazar-venta/'+id,{method:'POST'});cargarPendientes();}
+
+async function cargarMetricas(){
+  const r=await fetch('/api/metricas');
+  const d=await r.json();
+  if(d.total_ventas_30d===undefined)return;
+  document.getElementById('m-hoy').textContent='$'+(d.total_hoy||0).toLocaleString('es-AR');
+  document.getElementById('m-hoy-v').textContent=(d.ventas_hoy||0)+' ventas';
+  document.getElementById('m-ayer').textContent='$'+(d.total_ayer||0).toLocaleString('es-AR');
+  document.getElementById('m-ayer-v').textContent=(d.ventas_ayer||0)+' ventas';
+  document.getElementById('m-30d').textContent='$'+d.total_ventas_30d.toLocaleString('es-AR');
+  document.getElementById('m-30d-v').textContent=d.cantidad_ventas_30d+' órdenes';
+  document.getElementById('m-ticket').textContent='$'+d.ticket_promedio.toLocaleString('es-AR');
+  document.getElementById('m-gan-hoy').textContent='$'+(d.ganancia_neta_hoy||0).toLocaleString('es-AR');
+  document.getElementById('m-gan-ayer').textContent='$'+(d.ganancia_neta_ayer||0).toLocaleString('es-AR');
+  document.getElementById('m-gan-30d').textContent='$'+(d.ganancia_neta_30d||0).toLocaleString('es-AR');
+  const mg=d.total_ventas_30d>0?((d.ganancia_neta_30d/d.total_ventas_30d)*100).toFixed(1):0;
+  document.getElementById('m-margen').textContent=mg+'%';
+  const feed=d.feed_ventas||[];
+  const fe=document.getElementById('feed-ventas');
+  if(!feed.length){fe.innerHTML='<p class="loading">Sin ventas aún.</p>';}
+  else{fe.innerHTML=feed.map(v=>`
+    <div class="sale-row">
+      <div class="sale-thumb">${v.imagen?`<img src="${v.imagen}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='📦'">`:'📦'}</div>
+      <div style="flex:1;min-width:0">
+        <p class="sale-name">${v.titulo}</p>
+        <p class="sale-meta">${v.hace} · $${v.precio?.toLocaleString('es-AR')}</p>
+      </div>
+      <div class="sale-gain"><p class="sale-gain-val">+$${v.ganancia_neta?.toLocaleString('es-AR')}</p><p class="sale-pct">${v.margen_pct}% margen</p></div>
+    </div>`).join('');}
+  document.getElementById('last-update').textContent=d.ultima_actualizacion||'—';
 }
 
-async function rechazarVenta(orderId) {
-  await fetch('/api/rechazar-venta/' + orderId, {method:'POST'});
-  cargarPendientes();
+async function cargarActividad(){
+  const r=await fetch('/api/actividad');
+  const d=await r.json();
+  const el=document.getElementById('actividad');
+  if(!d.length){el.innerHTML='<p class="loading">Sin actividad reciente.</p>';return;}
+  el.innerHTML=d.slice(-8).reverse().map(a=>`<div class="log-item"><span class="log-time">${a.hora}</span><div class="log-dot-sm"></div><div><strong>${a.tipo}</strong> — ${a.detalle}<br><span style="color:#999">${a.accion}</span></div></div>`).join('');
 }
 
-async function cargarMetricas() {
-  const r = await fetch('/api/metricas');
-  const d = await r.json();
-  if (d.total_ventas_30d === undefined) return;
-
-  document.getElementById('m-hoy').textContent     = '$' + (d.total_hoy||0).toLocaleString('es-AR');
-  document.getElementById('m-hoy-ventas').textContent = (d.ventas_hoy||0) + ' ventas';
-  document.getElementById('m-ayer').textContent    = '$' + (d.total_ayer||0).toLocaleString('es-AR');
-  document.getElementById('m-ayer-ventas').textContent = (d.ventas_ayer||0) + ' ventas';
-  document.getElementById('m-ingresos').textContent = '$' + d.total_ventas_30d.toLocaleString('es-AR');
-  document.getElementById('m-ventas').textContent  = d.cantidad_ventas_30d + ' órdenes';
-  document.getElementById('m-ticket').textContent  = '$' + d.ticket_promedio.toLocaleString('es-AR');
-
-  document.getElementById('m-gan-hoy').textContent  = '$' + (d.ganancia_neta_hoy||0).toLocaleString('es-AR');
-  document.getElementById('m-gan-ayer').textContent = '$' + (d.ganancia_neta_ayer||0).toLocaleString('es-AR');
-  document.getElementById('m-gan-30d').textContent  = '$' + (d.ganancia_neta_30d||0).toLocaleString('es-AR');
-  const margen = d.total_ventas_30d > 0 ? ((d.ganancia_neta_30d / d.total_ventas_30d) * 100).toFixed(1) : 0;
-  document.getElementById('m-margen').textContent  = margen + '%';
-
-  // Feed de ventas
-  const feed = d.feed_ventas || [];
-  const feedEl = document.getElementById('feed-ventas');
-  if (!feed.length) { feedEl.innerHTML = '<p class="loading">Sin ventas aún.</p>'; }
-  else {
-    feedEl.innerHTML = feed.map(v => `
-      <div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-        ${v.imagen ? `<img src="${v.imagen}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.style.display='none'">` : '<div style="width:44px;height:44px;background:var(--surface2);border-radius:6px;flex-shrink:0"></div>'}
-        <div style="flex:1;min-width:0">
-          <p style="font-size:12px;font-weight:500;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.titulo}</p>
-          <p style="font-size:11px;color:var(--muted);margin:0">${v.hace} · $${v.precio?.toLocaleString('es-AR')}</p>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <p style="font-size:12px;font-weight:600;color:#10b981;margin:0">+$${v.ganancia_neta?.toLocaleString('es-AR')}</p>
-          <p style="font-size:11px;color:var(--muted);margin:0">${v.margen_pct}% margen</p>
-        </div>
-      </div>`).join('');
-  }
-
-  document.getElementById('last-update').textContent = '⏱ ' + (d.ultima_actualizacion || 'Sin datos');
+async function obtenerSugerencias(){
+  document.getElementById('sugerencias').innerHTML='<p class="loading">Analizando...</p>';
+  const r=await fetch('/api/sugerencias');
+  const d=await r.json();
+  if(d.error){document.getElementById('sugerencias').innerHTML=`<p class="loading">${d.error}</p>`;return;}
+  const col={alto:'tag-alto',medio:'tag-medio',bajo:'tag-bajo'};
+  let h=`<p style="font-size:11px;color:#666;margin-bottom:10px;line-height:1.6">${d.resumen}</p>`;
+  (d.sugerencias||[]).forEach(s=>{h+=`<div class="sug-item"><p class="sug-title">${s.titulo}</p><p class="sug-desc">${s.descripcion}</p><div style="display:flex;gap:5px"><span class="tag ${col[s.impacto]||'tag-bajo'}">impacto ${s.impacto}</span><span class="tag ${col[s.esfuerzo]||'tag-bajo'}">esfuerzo ${s.esfuerzo}</span></div></div>`;});
+  document.getElementById('sugerencias').innerHTML=h;
 }
 
-async function cargarActividad() {
-  const r = await fetch('/api/actividad');
-  const d = await r.json();
-  const el = document.getElementById('actividad');
-  if (!d.length) { el.innerHTML = '<p class="loading">Sin actividad reciente.</p>'; return; }
-  el.innerHTML = d.slice(-10).reverse().map(a =>
-    `<div class="log-item"><span class="log-time">${a.hora}</span><div class="log-dot"></div><div><strong>${a.tipo}</strong> — ${a.detalle}<br><span style="color:var(--muted);font-size:11px">${a.accion}</span></div></div>`
-  ).join('');
+async function analizarPromociones(){
+  document.getElementById('promociones').innerHTML='<p class="loading">Analizando productos...</p>';
+  const r=await fetch('/api/promociones/resumen');
+  const d=await r.json();
+  const el=document.getElementById('promociones');
+  if(!d.detalle_activas?.length){el.innerHTML='<p class="loading">Sin promociones activas.</p>';return;}
+  el.innerHTML=d.detalle_activas.map(p=>`<div class="promo-row"><span class="badge-off">-${p.descuento_pct}%</span><span style="font-size:12px;color:#1a1a1a;flex:1">${p.item_id}</span><span style="font-size:10px;color:#999">vence en ${p.vence_en}</span></div>`).join('');
 }
 
-async function obtenerSugerencias() {
-  document.getElementById('sugerencias').innerHTML = '<p class="loading">Analizando tu negocio...</p>';
-  const r = await fetch('/api/sugerencias');
-  const d = await r.json();
-  if (d.error) { document.getElementById('sugerencias').innerHTML = `<p class="loading">${d.error}</p>`; return; }
-  const colores = { alto:'tag-alto', medio:'tag-medio', bajo:'tag-bajo' };
-  let html = `<p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">${d.resumen}</p>`;
-  (d.sugerencias||[]).forEach(s => {
-    html += `<div class="sugerencia">
-      <p class="sug-titulo">${s.titulo}</p>
-      <p class="sug-desc">${s.descripcion}</p>
-      <div class="tags">
-        <span class="tag ${colores[s.impacto]||'tag-bajo'}">impacto ${s.impacto}</span>
-        <span class="tag ${colores[s.esfuerzo]||'tag-bajo'}">esfuerzo ${s.esfuerzo}</span>
-      </div></div>`;
-  });
-  document.getElementById('sugerencias').innerHTML = html;
-}
+async function procesarPreguntas(){document.getElementById('actividad').innerHTML='<p class="loading">Procesando...</p>';await fetch('/api/procesar-preguntas',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},3000);}
+async function cicloCompleto(){await fetch('/api/ciclo',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},5000);}
 
-async function procesarPreguntas() {
-  document.getElementById('actividad').innerHTML = '<p class="loading">Procesando preguntas...</p>';
-  await fetch('/api/procesar-preguntas', {method:'POST'});
-  setTimeout(() => { cargarMetricas(); cargarActividad(); }, 3000);
-}
-
-async function cicloCompleto() {
-  await fetch('/api/ciclo', {method:'POST'});
-  setTimeout(() => { cargarMetricas(); cargarActividad(); }, 5000);
-}
-
-cargarMetricas();
-cargarActividad();
-cargarPendientes();
-setInterval(() => { cargarMetricas(); cargarActividad(); cargarPendientes(); }, 30000);
+cargarMetricas();cargarActividad();cargarPendientes();
+setInterval(()=>{cargarMetricas();cargarActividad();cargarPendientes();},30000);
 </script>
 </body>
 </html>"""
