@@ -845,6 +845,61 @@ def pagina_publicar():
 
 
 # =============================================================
+#  RUTAS DE PROMOCIONES
+# =============================================================
+
+try:
+    from promociones import MotorPromociones
+    motor_promociones = MotorPromociones(sistema.ml, CONFIG.get("ANTHROPIC_API_KEY",""))
+    PROMOCIONES_ACTIVO = True
+except Exception as e:
+    PROMOCIONES_ACTIVO = False
+    print(f"⚠️  Promociones no disponible: {e}")
+
+
+@app.route("/api/promociones/resumen")
+def api_promociones_resumen():
+    if not PROMOCIONES_ACTIVO:
+        return jsonify({"promociones_activas": 0, "detalle_activas": [], "historial": []})
+    return jsonify(motor_promociones.obtener_resumen())
+
+
+@app.route("/api/promociones/analizar")
+def api_promociones_analizar():
+    if not PROMOCIONES_ACTIVO:
+        return jsonify([])
+    try:
+        return jsonify(motor_promociones.analizar_productos())
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
+@app.route("/api/promociones/aplicar", methods=["POST"])
+def api_aplicar_promocion():
+    if not PROMOCIONES_ACTIVO:
+        return jsonify({"ok": False})
+    datos = request.json
+    return jsonify(motor_promociones.aplicar_descuento(
+        datos["item_id"], datos["descuento_pct"], datos.get("motivo", "manual")
+    ))
+
+
+@app.route("/api/promociones/revertir/<item_id>", methods=["POST"])
+def api_revertir_promocion(item_id):
+    if not PROMOCIONES_ACTIVO:
+        return jsonify({"ok": False})
+    return jsonify(motor_promociones.revertir_descuento(item_id))
+
+
+@app.route("/api/promociones/ciclo", methods=["POST"])
+def api_ciclo_promociones():
+    if not PROMOCIONES_ACTIVO:
+        return jsonify({"ok": False})
+    threading.Thread(target=motor_promociones.ciclo_promociones, daemon=True).start()
+    return jsonify({"status": "ciclo de promociones iniciado"})
+
+
+# =============================================================
 #  ARRANQUE
 # =============================================================
 
