@@ -215,7 +215,12 @@ class PublicadorML:
             cat_id     = config_publicacion["categoria_id"]
             margen_pct = config_publicacion["margen_pct"]
             envio_gratis = config_publicacion.get("envio_gratis", False)
-            costo      = config_publicacion["costo_droppers"]
+            # Usar el costo del producto individual, no el del config global
+            costo = producto_droppers.get("costo", 0) or config_publicacion.get("costo_droppers", 0)
+
+            # Si no hay costo, no podemos calcular el precio
+            if costo == 0:
+                return {"ok": False, "error": "Producto sin precio de costo — cargá el precio en Droppers"}
 
             # 1. Buscar precio de competencia
             precio_comp = self.buscar_precio_competencia(
