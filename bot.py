@@ -986,6 +986,19 @@ def api_categorias_droppers():
 scraper_estado = {"corriendo": False, "progreso": 0, "total": 0, "productos": [], "categoria": ""}
 
 
+@app.route("/api/cargar-productos", methods=["POST"])
+def api_cargar_productos():
+    global scraper_estado
+    datos = request.json
+    productos = datos.get("productos", [])
+    scraper_estado["productos"] = productos
+    scraper_estado["total"] = len(productos)
+    scraper_estado["progreso"] = len(productos)
+    scraper_estado["corriendo"] = False
+    log(f"✅ {len(productos)} productos cargados externamente")
+    return jsonify({"ok": True, "productos": len(productos)})
+
+
 @app.route("/api/scrape-droppers", methods=["POST"])
 def api_scrape_droppers():
     global scraper_estado
