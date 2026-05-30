@@ -1035,10 +1035,29 @@ def api_scrape_droppers():
     def correr_scrape():
         global scraper_estado
         try:
-            from scraper_droppers import ScraperDroppers
+            import os
             scraper_estado = {"corriendo": True, "progreso": 0, "total": 0, "productos": [], "categoria": categoria}
+            
+            # Intentar leer desde archivo JSON primero
+            json_path = os.path.join(os.path.dirname(__file__), "productos_droppers.json")
+            if os.path.exists(json_path):
+                with open(json_path, "r", encoding="utf-8") as f:
+                    productos = json.load(f)
+                # Filtrar por categoría si es posible
+                from scraper_droppers import CATEGORIAS_DROPPERS
+                cat_ml = CATEGORIAS_DROPPERS.get(categoria, {}).get("ml", "")
+                for p in productos:
+                    p["categoria_ml"] = cat_ml
+                scraper_estado["productos"] = productos
+                scraper_estado["total"] = len(productos)
+                scraper_estado["progreso"] = len(productos)
+                scraper_estado["corriendo"] = False
+                log(f"✅ {len(productos)} productos cargados desde archivo para {categoria}")
+                return
+
+            # Si no hay archivo, intentar scrape online
+            from scraper_droppers import ScraperDroppers
             s = ScraperDroppers()
-            s.login(CONFIG.get("DROPPERS_USER",""), CONFIG.get("DROPPERS_PASS",""))
             productos = s.scrape_categoria(categoria)
             scraper_estado["productos"] = productos
             scraper_estado["total"] = len(productos)
