@@ -35,14 +35,14 @@ import anthropic
 
 CONFIG = {
     # --- Mercado Libre ---
-    "ML_CLIENT_ID":     "TU_CLIENT_ID_AQUI",
-    "ML_CLIENT_SECRET": "TU_CLIENT_SECRET_AQUI",
-    "ML_ACCESS_TOKEN":  "TU_ACCESS_TOKEN_AQUI",   # se refresca automático
-    "ML_REFRESH_TOKEN": "TU_REFRESH_TOKEN_AQUI",
-    "ML_USER_ID":       "TU_USER_ID_AQUI",         # número de tu cuenta ML
+    "ML_CLIENT_ID":     os.environ.get("ML_CLIENT_ID", ""),
+    "ML_CLIENT_SECRET": os.environ.get("ML_CLIENT_SECRET", ""),
+    "ML_ACCESS_TOKEN":  os.environ.get("ML_ACCESS_TOKEN", ""),   # se refresca automático
+    "ML_REFRESH_TOKEN": os.environ.get("ML_REFRESH_TOKEN", ""),
+    "ML_USER_ID":       os.environ.get("ML_USER_ID", ""),         # número de tu cuenta ML
 
     # --- Claude (Anthropic) ---
-    "ANTHROPIC_API_KEY": "TU_ANTHROPIC_API_KEY_AQUI",
+    "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY", ""),
 
     # --- Precios automáticos ---
     # Margen mínimo sobre costo (0.15 = 15%). No baja de esto nunca.
