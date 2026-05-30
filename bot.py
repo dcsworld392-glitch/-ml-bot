@@ -169,7 +169,7 @@ No inventes información que no esté en la descripción.
 Usá español rioplatense natural."""
 
         msg = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-5",
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -190,7 +190,7 @@ Devolvé SOLO un JSON con este formato exacto:
 }}"""
 
         msg = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-5",
             max_tokens=600,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -219,7 +219,7 @@ Respondé en formato JSON:
 }}"""
 
         msg = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-5",
             max_tokens=800,
             messages=[{"role": "user", "content": prompt}]
         )

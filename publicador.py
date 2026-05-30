@@ -100,7 +100,7 @@ Devolvé SOLO un JSON válido con este formato exacto (sin texto adicional, sin 
 }}"""
 
         msg = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-5",
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -126,7 +126,7 @@ Identificá los problemas y generá versiones mejoradas. Devolvé SOLO JSON:
 }}"""
 
         msg = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-5",
             max_tokens=800,
             messages=[{"role": "user", "content": prompt}]
         )
