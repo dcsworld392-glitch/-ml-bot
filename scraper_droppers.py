@@ -59,26 +59,66 @@ class ScraperDroppers:
                 r = self.session.get(url, timeout=20)
                 soup = BeautifulSoup(r.text, "html.parser")
 
-                # Buscar items con múltiples selectores
-                items = (soup.select(".product-item") or
-                         soup.select(".item.product.product-item") or
-                         soup.select("li.item"))
+                # Droppers usa una lista ordenada con items de productos
+                # Cada item tiene: img con link + negrita con link al producto
+                items_encontrados = 0
 
-                if not items:
-                    # Intentar con product-items-list
-                    items = soup.select(".products-grid .item")
+                # Buscar todos los links a productos (.html que no sean categorías)
+                links_productos = set()
+                for a in soup.find_all("a", href=True):
+                    href = a["href"]
+                    if (href.endswith(".html") and
+                        BASE in href and
+                        "/productos/" not in href and
+                        "/como-funciona" not in href and
+                        "/customer/" not in href and
+                        "/checkout/" not in href and
+                        "/dropper/" not in href and
+                        href != f"{BASE}/" and
+                        "login" not in href and
+                        "create" not in href):
+                        links_productos.add(href)
 
-                if not items:
+                # Buscar imágenes de productos con sus nombres
+                for img in soup.find_all("img", alt=True):
+                    alt = img.get("alt", "").strip()
+                    src = img.get("src", "")
+                    if (alt and len(alt) > 5 and
+                        "logo" not in alt.lower() and
+                        "banner" not in alt.lower() and
+                        "placeholder" not in src.lower() and
+                        "/media/catalog/product/" in src):
+
+                        # Encontrar el link asociado a esta imagen
+                        parent = img.find_parent("a")
+                        url_prod = ""
+                        if parent and parent.get("href", "").endswith(".html"):
+                            url_prod = parent["href"]
+
+                        # Mejorar resolución de imagen
+                        img_url = re.sub(r"/cache/[a-f0-9]{32}/", "/", src)
+                        if img_url.startswith("/"):
+                            img_url = BASE + img_url
+
+                        if url_prod and alt not in [p["titulo"] for p in productos]:
+                            productos.append({
+                                "titulo":    alt,
+                                "costo":     0,  # se obtiene del detalle
+                                "url":       url_prod,
+                                "imagenes":  [img_url],
+                                "stock":     10,
+                                "atributos": [],
+                                "categoria_ml": cat_info["ml"],
+                            })
+                            items_encontrados += 1
+
+                if items_encontrados == 0:
                     break
 
-                for item in items:
-                    prod = self._parsear_item_lista(item)
-                    if prod:
-                        prod["categoria_ml"] = cat_info["ml"]
-                        productos.append(prod)
-
-                # Verificar si hay página siguiente
-                siguiente = soup.select_one(".next a, .pages-item-next a, a[title='Siguiente']")
+                # Ver si hay página siguiente
+                siguiente = soup.find("a", string=re.compile("Siguiente|Next", re.I))
+                if not siguiente:
+                    siguiente = soup.select_one(".pages-item-next a, .next a")
                 if not siguiente:
                     break
                 pagina += 1
@@ -87,11 +127,21 @@ class ScraperDroppers:
                 print(f"Error página {pagina}: {e}")
                 break
 
-        # Si no encontró nada con la lista, intentar scrape individual de detalle
-        if not productos:
-            productos = self._scrape_via_links(cat_info["url"], cat_info["ml"])
+        # Obtener precios de las páginas de detalle (primeros 20)
+        for prod in productos[:20]:
+            if prod["costo"] == 0 and prod["url"]:
+                try:
+                    detalle = self._scrape_detalle(prod["url"])
+                    if detalle:
+                        prod["costo"] = detalle.get("costo", 0)
+                        if detalle.get("imagenes"):
+                            prod["imagenes"] = detalle["imagenes"]
+                        if detalle.get("descripcion"):
+                            prod["descripcion"] = detalle["descripcion"]
+                except:
+                    pass
 
-        return productos
+        return [p for p in productos if p["titulo"]]
 
     def _parsear_item_lista(self, item):
         """Extrae datos básicos de un item en la lista."""
