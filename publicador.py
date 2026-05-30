@@ -260,7 +260,7 @@ class PublicadorML:
                 "category_id":      cat_id,
                 "price":            precio_final,
                 "currency_id":      "ARS",
-                "available_quantity": producto_droppers.get("stock", 10),
+                "available_quantity": 1,
                 "buying_mode":      "buy_it_now",
                 "condition":        condicion,
                 "listing_type_id":  tipo_listing,
@@ -273,9 +273,12 @@ class PublicadorML:
                 ],
                 "shipping": {
                     "mode": "not_specified",
+                    "free_shipping": False,
                 },
                 "sale_terms": [],
-                "attributes":  producto_droppers.get("atributos", []),
+                "attributes": [
+                    {"id": "BRAND", "value_name": "Genérico"}
+                ],
             }
 
             # 5. Publicar en ML
