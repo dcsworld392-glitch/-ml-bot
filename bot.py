@@ -626,64 +626,60 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
       <button class="mini-btn" onclick="togglePublicar()">✕ Cerrar</button>
     </div>
     <div class="panel">
-      <div class="g2" style="margin-bottom:16px">
+      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:12px">Paso 1 — Elegí la categoría de Droppers</p>
+      <div class="g2" style="margin-bottom:14px">
         <div>
-          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría de ML</label>
-          <select id="pub-categoria" onchange="pubCalcPrecio()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría de Droppers</label>
+          <select id="pub-cat-droppers" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
             <option value="">Cargando...</option>
           </select>
         </div>
-        <div>
-          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Costo en Droppers (ARS)</label>
-          <input type="number" id="pub-costo" placeholder="ej: 5000" oninput="pubCalcPrecio()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+        <div style="display:flex;align-items:flex-end">
+          <button onclick="iniciarScrape()" id="btn-scrape" style="width:100%;background:#185FA5;color:#fff;border:none;padding:9px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">🔍 Traer catálogo de Droppers</button>
         </div>
       </div>
-      <div class="g2" style="margin-bottom:16px">
+      <div id="scrape-estado" style="display:none;background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:8px;padding:12px;margin-bottom:14px">
+        <p style="font-size:12px;font-weight:600;color:#185FA5;margin-bottom:6px" id="scrape-titulo">Obteniendo catálogo...</p>
+        <div style="height:5px;background:#B5D4F4;border-radius:3px;overflow:hidden;margin-bottom:6px"><div id="scrape-barra" style="height:100%;background:#185FA5;border-radius:3px;transition:width .5s;width:10%"></div></div>
+        <p style="font-size:11px;color:#185FA5" id="scrape-cant">Buscando productos...</p>
+      </div>
+      <div id="prod-preview" style="display:none;margin-bottom:16px">
+        <p style="font-size:11px;color:#999;margin-bottom:8px">Productos encontrados: <strong id="prod-count" style="color:#185FA5">0</strong></p>
+        <div id="prod-lista" style="max-height:160px;overflow-y:auto;background:#F7F6F3;border-radius:8px;padding:10px;font-size:12px"></div>
+      </div>
+      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:12px">Paso 2 — Configurá margen y categoría ML</p>
+      <div class="g2" style="margin-bottom:14px">
         <div>
           <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen de ganancia (%)</label>
-          <input type="number" id="pub-margen" value="25" min="5" max="80" oninput="pubCalcPrecio()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
-          <div id="pub-margen-estado" style="margin-top:4px;font-size:11px"></div>
+          <input type="number" id="pub-margen" value="25" min="5" max="80" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
         </div>
         <div>
-          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Precio de venta estimado</label>
-          <input type="number" id="pub-precio" placeholder="se calcula automático" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría en ML</label>
+          <select id="pub-categoria" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <option value="">Seleccioná...</option>
+          </select>
         </div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #f0ede8;border-bottom:0.5px solid #f0ede8;margin-bottom:14px">
-        <div>
-          <p style="font-size:12px;font-weight:500">🚚 Envío gratis</p>
-          <p style="font-size:11px;color:#999">Aumenta el CTR. El costo se suma al precio.</p>
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #f0ede8;border-bottom:0.5px solid #f0ede8;margin-bottom:16px">
+        <div><p style="font-size:12px;font-weight:500">🚚 Envío gratis</p><p style="font-size:11px;color:#999">Aumenta el CTR. El costo se suma al precio automáticamente.</p></div>
         <label style="position:relative;width:44px;height:24px;flex-shrink:0">
-          <input type="checkbox" id="pub-envio" onchange="pubCalcPrecio()" style="opacity:0;width:0;height:0">
+          <input type="checkbox" id="pub-envio" style="opacity:0;width:0;height:0">
           <span id="pub-envio-slider" onclick="document.getElementById('pub-envio').click()" style="position:absolute;inset:0;background:#d1d5db;border-radius:24px;cursor:pointer;transition:.3s"></span>
         </label>
       </div>
-      <div id="pub-calc" style="display:none;background:#F7F6F3;border-radius:8px;padding:14px;margin-bottom:14px">
-        <p style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:8px">Desglose de costos</p>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Precio de venta</span><span id="pc-precio">—</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Costo Droppers</span><span id="pc-costo" style="color:#A32D2D">—</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span id="pc-com-label">Comisión ML</span><span id="pc-comision" style="color:#A32D2D">—</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>IVA + IIBB</span><span id="pc-impuestos" style="color:#A32D2D">—</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Envío</span><span id="pc-envio" style="color:#A32D2D">—</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:#3B6D11;border-top:0.5px solid #e5e3de;margin-top:6px;padding-top:6px"><span>💚 Ganancia neta</span><span id="pc-ganancia">—</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:#999;padding-top:3px"><span>Margen real</span><span id="pc-margen">—</span></div>
-      </div>
-      <!-- Comparación con ML -->
-      <div id="pub-ml-precio" style="display:none;background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:8px;padding:12px 14px;margin-bottom:14px">
-        <p style="font-size:11px;font-weight:600;color:#185FA5;margin-bottom:6px">📊 Comparación con Mercado Libre</p>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:#444">Precio mediano en ML (competencia)</span><span id="ml-precio-comp" style="font-weight:600;color:#185FA5">buscando...</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:#444">Tu precio sugerido</span><span id="ml-precio-tuyo" style="font-weight:600;color:#3B6D11">—</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;margin-top:4px;border-top:0.5px solid #B5D4F4;padding-top:6px"><span style="color:#444">Posición estimada</span><span id="ml-posicion">—</span></div>
-      </div>
-        <textarea id="pub-json" rows="6" placeholder='[{"titulo":"Auriculares Bluetooth","costo":8500,"stock":10,"imagenes":[],"atributos":[]}]' style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:10px 12px;color:#1a1a1a;font-size:12px;font-family:'JetBrains Mono',monospace;resize:vertical"></textarea>
-        <button onclick="pubEjemplo()" style="margin-top:6px;font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid #e5e3de;background:#F7F6F3;color:#666;cursor:pointer;font-family:'Inter',sans-serif">Cargar ejemplo</button>
-      </div>
-      <button id="btn-pub" onclick="iniciarPublicacion()" style="width:100%;background:#1a1a1a;color:#fff;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">🚀 Publicar con IA</button>
+      <button id="btn-pub" onclick="iniciarPublicacion()" disabled style="width:100%;background:#1a1a1a;color:#fff;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;opacity:.4">
+        🚀 Publicar catálogo completo con IA
+      </button>
       <div id="pub-progreso" style="display:none;margin-top:16px">
-        <p style="font-size:12px;margin-bottom:6px">Publicando... <span id="pub-prog-txt">0/0</span></p>
-        <div style="height:6px;background:#e5e3de;border-radius:3px;overflow:hidden"><div id="pub-prog-barra" style="height:100%;background:#3B6D11;border-radius:3px;transition:width .3s;width:0%"></div></div>
-        <div id="pub-resultados" style="margin-top:12px"></div>
+        <p style="font-size:12px;margin-bottom:6px;font-weight:500">Publicando... <span id="pub-prog-txt">0/0</span></p>
+        <div style="height:6px;background:#e5e3de;border-radius:3px;overflow:hidden;margin-bottom:12px"><div id="pub-prog-barra" style="height:100%;background:#3B6D11;border-radius:3px;transition:width .3s;width:0%"></div></div>
+        <div id="pub-reporte" style="display:none;margin-bottom:12px">
+          <p style="font-size:11px;font-weight:600;color:#3B6D11;margin-bottom:6px">✅ Precios competitivos</p>
+          <div id="pub-competitivos" style="margin-bottom:10px"></div>
+          <p style="font-size:11px;font-weight:600;color:#A32D2D;margin-bottom:6px">⚠️ Revisar precio</p>
+          <div id="pub-no-competitivos"></div>
+        </div>
+        <div id="pub-resultados"></div>
       </div>
     </div>
   </div>
@@ -695,113 +691,110 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
 
 <script>
 let pubCategorias = [];
+let productosDroppers = [];
 
 function togglePublicar() {
   const p = document.getElementById('panel-publicar');
   p.style.display = p.style.display === 'none' ? 'block' : 'none';
   if (p.style.display === 'block') {
     p.scrollIntoView({behavior:'smooth'});
-    if (!pubCategorias.length) cargarPubCategorias();
+    cargarPubCategorias();
   }
 }
 
 async function cargarPubCategorias() {
-  const r = await fetch('/api/categorias-ml');
-  pubCategorias = await r.json();
-  const sel = document.getElementById('pub-categoria');
-  sel.innerHTML = '<option value="">Seleccioná una categoría</option>' + pubCategorias.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
+  // Categorías de Droppers
+  try {
+    const r = await fetch('/api/categorias-droppers');
+    const cats = await r.json();
+    const sel = document.getElementById('pub-cat-droppers');
+    sel.innerHTML = '<option value="">Seleccioná una categoría</option>' + cats.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
+  } catch(e) {}
+  // Categorías ML
+  try {
+    const r = await fetch('/api/categorias-ml');
+    pubCategorias = await r.json();
+    const sel = document.getElementById('pub-categoria');
+    sel.innerHTML = '<option value="">Seleccioná...</option>' + pubCategorias.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
+  } catch(e) {}
 }
 
-async function pubCalcPrecio() {
-  const costo = parseFloat(document.getElementById('pub-costo').value)||0;
-  const margen = parseFloat(document.getElementById('pub-margen').value)||25;
-  const cat = document.getElementById('pub-categoria').value||'default';
-  const envio = document.getElementById('pub-envio').checked;
-  const slider = document.getElementById('pub-envio-slider');
-  slider.style.background = envio ? '#639922' : '#d1d5db';
-  if (!costo) { document.getElementById('pub-calc').style.display='none'; return; }
-
-  // Calcular precio sugerido primero
-  const r = await fetch('/api/calcular-precio', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({costo_droppers:costo, margen_pct:margen, categoria:cat, envio_gratis:envio, precio_venta:0})
-  });
-  const d = await r.json();
-  const precioSugerido = d.precio_sugerido || 0;
-
-  // Ahora calcular el desglose con el precio sugerido real
-  const r2 = await fetch('/api/calcular-precio', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({costo_droppers:costo, margen_pct:margen, categoria:cat, envio_gratis:envio, precio_venta:precioSugerido})
-  });
-  const d2 = await r2.json();
-
-  document.getElementById('pub-precio').value = precioSugerido;
-  document.getElementById('pub-calc').style.display='block';
-  document.getElementById('pc-precio').textContent='$'+precioSugerido.toLocaleString('es-AR');
-  document.getElementById('pc-costo').textContent='-$'+costo.toLocaleString('es-AR');
-  document.getElementById('pc-com-label').textContent=`Comisión ML (${d2.tasa_comision_pct||14}%)`;
-  document.getElementById('pc-comision').textContent='-$'+(d2.comision_ml||0).toLocaleString('es-AR');
-  document.getElementById('pc-impuestos').textContent='-$'+((d2.iva_comision||0)+(d2.iibb||0)).toLocaleString('es-AR');
-  document.getElementById('pc-envio').textContent=envio?'-$'+(d2.costo_envio||2000).toLocaleString('es-AR'):'$0';
-  document.getElementById('pc-ganancia').textContent='$'+(d2.ganancia_neta||0).toLocaleString('es-AR');
-  document.getElementById('pc-margen').textContent=(d2.margen_neto_pct||0)+'%';
-
-  const me = document.getElementById('pub-margen-estado');
-  if ((d2.margen_neto_pct||0) < 10) me.innerHTML='<span style="color:#A32D2D">⚠️ Margen muy bajo</span>';
-  else if ((d2.margen_neto_pct||0) < 20) me.innerHTML='<span style="color:#854F0B">⚡ Margen ajustado</span>';
-  else me.innerHTML='<span style="color:#3B6D11">✅ Buen margen</span>';
-
-  // Buscar precio en ML para comparar
-  const titulo = (() => { try { return JSON.parse(document.getElementById('pub-json').value||'[]')[0]?.titulo||''; } catch(e){return '';} })();
-  if (titulo && cat) {
-    document.getElementById('pub-ml-precio').style.display='block';
-    document.getElementById('ml-precio-comp').textContent='buscando...';
-    document.getElementById('ml-precio-tuyo').textContent='$'+precioSugerido.toLocaleString('es-AR');
-    try {
-      const rm = await fetch('/api/precio-ml?titulo='+encodeURIComponent(titulo.substring(0,40))+'&categoria='+encodeURIComponent(cat));
-      const dm = await rm.json();
-      if (dm.precio_mediano) {
-        document.getElementById('ml-precio-comp').textContent='$'+dm.precio_mediano.toLocaleString('es-AR');
-        const diff = ((precioSugerido - dm.precio_mediano) / dm.precio_mediano * 100).toFixed(1);
-        const pos = diff <= 0 ? `<span style="color:#3B6D11">✅ ${Math.abs(diff)}% más barato que la competencia</span>`
-                   : diff <= 5 ? `<span style="color:#854F0B">⚡ ${diff}% más caro — competitivo igual</span>`
-                   : `<span style="color:#A32D2D">⚠️ ${diff}% más caro — considerá bajar el precio</span>`;
-        document.getElementById('ml-posicion').innerHTML=pos;
-      } else {
-        document.getElementById('ml-precio-comp').textContent='Sin datos';
-        document.getElementById('ml-posicion').innerHTML='<span style="color:#999">Producto nuevo en ML</span>';
-      }
-    } catch(e) {
-      document.getElementById('ml-precio-comp').textContent='No disponible';
+async function iniciarScrape() {
+  const cat = document.getElementById('pub-cat-droppers').value;
+  if (!cat) { alert('Seleccioná una categoría de Droppers primero'); return; }
+  document.getElementById('scrape-estado').style.display = 'block';
+  document.getElementById('scrape-titulo').textContent = `Obteniendo catálogo de "${cat}"...`;
+  document.getElementById('scrape-cant').textContent = 'Esto puede tardar 1-2 minutos...';
+  document.getElementById('scrape-barra').style.width = '20%';
+  document.getElementById('prod-preview').style.display = 'none';
+  document.getElementById('btn-pub').disabled = true;
+  document.getElementById('btn-pub').style.opacity = '.4';
+  await fetch('/api/scrape-droppers', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({categoria: cat})});
+  // Polling
+  const iv = setInterval(async () => {
+    const r = await fetch('/api/estado-scrape');
+    const d = await r.json();
+    document.getElementById('scrape-barra').style.width = d.corriendo ? '60%' : '100%';
+    document.getElementById('scrape-cant').textContent = `${d.productos} productos encontrados`;
+    if (!d.corriendo && d.productos > 0) {
+      clearInterval(iv);
+      document.getElementById('scrape-titulo').textContent = `✅ Catálogo listo — ${d.productos} productos`;
+      document.getElementById('scrape-barra').style.background = '#639922';
+      // Cargar preview
+      const r2 = await fetch('/api/productos-scrapeados');
+      productosDroppers = await r2.json();
+      document.getElementById('prod-count').textContent = productosDroppers.length;
+      document.getElementById('prod-lista').innerHTML = productosDroppers.slice(0,10).map(p =>
+        `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e5e3de">
+          <span style="color:#1a1a1a">${p.titulo.substring(0,45)}</span>
+          <span style="color:#3B6D11;font-weight:500;flex-shrink:0;margin-left:8px">$${p.costo.toLocaleString('es-AR')}</span>
+        </div>`
+      ).join('') + (productosDroppers.length > 10 ? `<p style="color:#999;font-size:11px;margin-top:6px">... y ${productosDroppers.length-10} más</p>` : '');
+      document.getElementById('prod-preview').style.display = 'block';
+      document.getElementById('btn-pub').disabled = false;
+      document.getElementById('btn-pub').style.opacity = '1';
+      // Auto-seleccionar categoría ML sugerida
+      const r3 = await fetch('/api/estado-scrape');
+      const d3 = await r3.json();
     }
-  }
-}
-
-function pubEjemplo() {
-  document.getElementById('pub-json').value = JSON.stringify([{"titulo":"Auriculares Bluetooth Inalámbricos con Micrófono","costo":8500,"stock":10,"imagenes":[],"atributos":[]},{"titulo":"Cargador USB Carga Rápida 20W Universal","costo":3200,"stock":15,"imagenes":[],"atributos":[]}],null,2);
+    if (!d.corriendo && d.productos === 0) {
+      clearInterval(iv);
+      document.getElementById('scrape-titulo').textContent = '❌ No se encontraron productos — intentá con otra categoría';
+    }
+  }, 3000);
 }
 
 async function iniciarPublicacion() {
-  let productos;
-  try { productos = JSON.parse(document.getElementById('pub-json').value); } catch(e) { alert('JSON inválido'); return; }
-  if (!productos?.length) { alert('No hay productos'); return; }
+  if (!productosDroppers.length) { alert('Primero traé el catálogo de Droppers'); return; }
   const cat = document.getElementById('pub-categoria').value;
   const catData = pubCategorias.find(c=>c.nombre===cat);
-  if (!cat||!catData) { alert('Seleccioná una categoría'); return; }
-  const config = {categoria_nombre:cat,categoria_id:catData.id,margen_pct:parseFloat(document.getElementById('pub-margen').value)||25,envio_gratis:document.getElementById('pub-envio').checked,costo_droppers:parseFloat(document.getElementById('pub-costo').value)||0};
-  document.getElementById('btn-pub').disabled=true;
-  document.getElementById('btn-pub').textContent='⏳ Publicando...';
-  document.getElementById('pub-progreso').style.display='block';
-  await fetch('/api/publicar-masivo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productos,config})});
+  if (!cat||!catData) { alert('Seleccioná la categoría de ML'); return; }
+  const margen = parseFloat(document.getElementById('pub-margen').value)||25;
+  const envio = document.getElementById('pub-envio').checked;
+  document.getElementById('pub-envio-slider').style.background = envio ? '#639922' : '#d1d5db';
+  const config = {categoria_nombre:cat, categoria_id:catData.id, margen_pct:margen, envio_gratis:envio, costo_droppers:0};
+  document.getElementById('btn-pub').disabled = true;
+  document.getElementById('btn-pub').textContent = '⏳ Publicando...';
+  document.getElementById('pub-progreso').style.display = 'block';
+  await fetch('/api/publicar-masivo', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({productos:productosDroppers, config})});
   const iv = setInterval(async()=>{
     const r=await fetch('/api/progreso-publicacion');
     const p=await r.json();
     const pct=p.total>0?(p.actual/p.total*100):0;
     document.getElementById('pub-prog-txt').textContent=`${p.actual}/${p.total}`;
     document.getElementById('pub-prog-barra').style.width=pct+'%';
-    document.getElementById('pub-resultados').innerHTML=p.resultados.map(r=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:0.5px solid #f0ede8;font-size:12px"><span style="background:${r.ok?'#EAF3DE':'#FCEBEB'};color:${r.ok?'#3B6D11':'#A32D2D'};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">${r.ok?'OK':'Error'}</span><span style="flex:1">${r.titulo||r.error||'...'}</span>${r.ok?`<span style="color:#3B6D11;font-size:11px">$${r.precio?.toLocaleString('es-AR')} · ${r.margen_pct}%</span>`:''}</div>`).join('');
-    if (!p.corriendo&&p.actual>=p.total&&p.total>0){clearInterval(iv);document.getElementById('btn-pub').disabled=false;document.getElementById('btn-pub').textContent='🚀 Publicar con IA';}
+    if (!p.corriendo && p.actual>=p.total && p.total>0) {
+      clearInterval(iv);
+      document.getElementById('btn-pub').disabled=false;
+      document.getElementById('btn-pub').textContent='🚀 Publicar catálogo completo con IA';
+      // Mostrar reporte de competitividad
+      const ok = p.resultados.filter(r=>r.ok);
+      const err = p.resultados.filter(r=>!r.ok);
+      document.getElementById('pub-reporte').style.display='block';
+      document.getElementById('pub-competitivos').innerHTML = ok.map(r=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:0.5px solid #f0ede8;font-size:12px"><span style="background:#EAF3DE;color:#3B6D11;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">✅</span><span style="flex:1">${r.titulo||''}</span><span style="color:#3B6D11;font-size:11px;flex-shrink:0">$${r.precio?.toLocaleString('es-AR')} · ${r.margen_pct}%</span></div>`).join('');
+      document.getElementById('pub-no-competitivos').innerHTML = err.map(r=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:0.5px solid #f0ede8;font-size:12px"><span style="background:#FCEBEB;color:#A32D2D;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">⚠️</span><span style="flex:1">${r.titulo||r.error||''}</span></div>`).join('');
+    }
+    document.getElementById('pub-resultados').innerHTML=p.resultados.slice(-5).map(r=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;font-size:11px;color:#999">${r.ok?'✅':'❌'} ${r.titulo||r.error||'...'}</div>`).join('');
   },2000);
 }
 async function cargarPendientes(){
@@ -978,6 +971,65 @@ def api_precio_ml():
 def api_categorias():
     from publicador import CATEGORIAS_ML
     return jsonify([{"nombre": k, "id": v} for k, v in CATEGORIAS_ML.items()])
+
+
+@app.route("/api/categorias-droppers")
+def api_categorias_droppers():
+    try:
+        from scraper_droppers import ScraperDroppers
+        s = ScraperDroppers()
+        return jsonify(s.obtener_categorias())
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
+scraper_estado = {"corriendo": False, "progreso": 0, "total": 0, "productos": [], "categoria": ""}
+
+
+@app.route("/api/scrape-droppers", methods=["POST"])
+def api_scrape_droppers():
+    global scraper_estado
+    if scraper_estado["corriendo"]:
+        return jsonify({"error": "Ya hay un scrape en curso"})
+
+    datos = request.json
+    categoria = datos.get("categoria", "")
+
+    def correr_scrape():
+        global scraper_estado
+        try:
+            from scraper_droppers import ScraperDroppers
+            scraper_estado = {"corriendo": True, "progreso": 0, "total": 0, "productos": [], "categoria": categoria}
+            s = ScraperDroppers()
+            s.login(CONFIG.get("DROPPERS_USER",""), CONFIG.get("DROPPERS_PASS",""))
+            productos = s.scrape_categoria(categoria)
+            scraper_estado["productos"] = productos
+            scraper_estado["total"] = len(productos)
+            scraper_estado["progreso"] = len(productos)
+            scraper_estado["corriendo"] = False
+            log(f"✅ Scrape completado: {len(productos)} productos de {categoria}")
+        except Exception as e:
+            scraper_estado["corriendo"] = False
+            log(f"❌ Error scrape: {e}")
+
+    threading.Thread(target=correr_scrape, daemon=True).start()
+    return jsonify({"status": "scrapeando", "categoria": categoria})
+
+
+@app.route("/api/estado-scrape")
+def api_estado_scrape():
+    return jsonify({
+        "corriendo":  scraper_estado["corriendo"],
+        "progreso":   scraper_estado["progreso"],
+        "total":      scraper_estado["total"],
+        "categoria":  scraper_estado["categoria"],
+        "productos":  len(scraper_estado["productos"]),
+    })
+
+
+@app.route("/api/productos-scrapeados")
+def api_productos_scrapeados():
+    return jsonify(scraper_estado["productos"][:100])
 
 
 @app.route("/api/calcular-precio", methods=["POST"])
