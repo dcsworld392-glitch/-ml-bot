@@ -20,15 +20,15 @@ from costos import CalculadoraCostos, COMISIONES_ML
 # Comisiones ML por categoría para el cálculo de precios
 CATEGORIAS_ML = {
     "Celulares y Smartphones":         "MLA1051",
-    "Computación":                     "MLA1648",
-    "Electrónica":                     "MLA1000",
+    "Computación":                     "MLA1652",
+    "Electrónica":                     "MLA1004",
     "Audio":                           "MLA1003",
     "Televisores":                     "MLA1002",
     "Cámaras y Accesorios":            "MLA1039",
     "Videojuegos":                     "MLA1144",
     "Electrodomésticos":               "MLA1574",
-    "Herramientas":                    "MLA1500",
-    "Hogar y Muebles":                 "MLA1499",
+    "Herramientas":                    "MLA1511",
+    "Hogar y Muebles":                 "MLA9201",
     "Ropa y Accesorios":               "MLA1430",
     "Deportes":                        "MLA1276",
     "Juguetes":                        "MLA5726",
@@ -222,6 +222,19 @@ class PublicadorML:
             if costo == 0:
                 return {"ok": False, "error": "Producto sin precio de costo — cargá el precio en Droppers"}
 
+            # Buscar categoría ML sugerida por la API según el título
+            try:
+                sugerencia = self.ml.get("/sites/MLA/domain_discovery/search", params={
+                    "q": producto_droppers.get("titulo","")[:50],
+                    "limit": 1
+                })
+                if sugerencia and len(sugerencia) > 0:
+                    cat_id_sugerido = sugerencia[0].get("category_id", cat_id)
+                    if cat_id_sugerido:
+                        cat_id = cat_id_sugerido
+            except:
+                pass
+
             # 1. Buscar precio de competencia
             precio_comp = self.buscar_precio_competencia(
                 producto_droppers.get("titulo", ""), cat_id
@@ -256,15 +269,13 @@ class PublicadorML:
                 },
                 "pictures": [
                     {"source": url} for url in producto_droppers.get("imagenes", [])[:6]
+                    if url and url.startswith("http")
                 ],
                 "shipping": {
-                    "mode":           "me2",
-                    "free_shipping":  envio_gratis,
-                    "free_methods": [{"id": 73328, "rule": {"default": True}}] if envio_gratis else [],
+                    "mode": "not_specified",
                 },
                 "sale_terms": [],
                 "attributes":  producto_droppers.get("atributos", []),
-                "tags": listing.get("terminos_busqueda", [])[:5],
             }
 
             # 5. Publicar en ML
