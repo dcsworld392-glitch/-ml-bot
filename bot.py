@@ -717,6 +717,30 @@ async function cargarPubCategorias() {
     const sel = document.getElementById('pub-categoria');
     sel.innerHTML = '<option value="">Seleccioná...</option>' + pubCategorias.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
   } catch(e) {}
+  // Verificar si ya hay productos cargados
+  try {
+    const r = await fetch('/api/estado-scrape');
+    const d = await r.json();
+    if (d.productos > 0) {
+      const r2 = await fetch('/api/productos-scrapeados');
+      productosDroppers = await r2.json();
+      document.getElementById('prod-count').textContent = productosDroppers.length;
+      document.getElementById('prod-lista').innerHTML = productosDroppers.slice(0,10).map(p =>
+        `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e5e3de">
+          <span style="color:#1a1a1a">${p.titulo.substring(0,45)}</span>
+          <span style="color:#3B6D11;font-weight:500;flex-shrink:0;margin-left:8px">${p.costo > 0 ? '$'+p.costo.toLocaleString('es-AR') : 'sin precio'}</span>
+        </div>`
+      ).join('') + (productosDroppers.length > 10 ? `<p style="color:#999;font-size:11px;margin-top:6px">... y ${productosDroppers.length-10} más</p>` : '');
+      document.getElementById('prod-preview').style.display = 'block';
+      document.getElementById('scrape-estado').style.display = 'block';
+      document.getElementById('scrape-titulo').textContent = `✅ ${productosDroppers.length} productos listos para publicar`;
+      document.getElementById('scrape-barra').style.width = '100%';
+      document.getElementById('scrape-barra').style.background = '#639922';
+      document.getElementById('scrape-cant').textContent = `${productosDroppers.length} productos cargados`;
+      document.getElementById('btn-pub').disabled = false;
+      document.getElementById('btn-pub').style.opacity = '1';
+    }
+  } catch(e) {}
 }
 
 async function iniciarScrape() {
