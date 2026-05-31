@@ -269,10 +269,11 @@ class PublicadorML:
             if "BRAND" not in ids_presentes:
                 atributos_listing.insert(0, {"id": "BRAND", "value_name": "Genérico"})
 
-            # Agregar EAN si está disponible
-            ean = listing.get("ean", "does_not_apply")
-            if "GTIN" not in ids_presentes and "EAN" not in ids_presentes:
-                atributos_listing.append({"id": "GTIN", "value_name": ean})
+            # Agregar EAN si está disponible y es válido
+            ean = listing.get("ean", "")
+            if ean and ean != "does_not_apply" and len(ean) >= 8:
+                if "GTIN" not in ids_presentes and "EAN" not in ids_presentes:
+                    atributos_listing.append({"id": "GTIN", "value_name": ean})
 
             # Agregar atributos requeridos que falten
             for attr_id in atributos_requeridos:
