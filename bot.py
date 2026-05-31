@@ -759,7 +759,10 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
           </div>
         </div>
         <div style="margin-bottom:14px">
-          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:8px">Cuotas sin interés</label>
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:8px">Cuotas sin interés — costo financiero</label>
+          <div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;font-size:11px;color:#854F0B;margin-bottom:8px;line-height:1.5">
+            ⚠️ Las cuotas sin interés se activan desde <strong>Mercado Pago → Tu negocio → Costos → Cuota Simple</strong>. Seleccioná cuántas cuotas ofrecés para que el costo se sume a tu margen.
+          </div>
           <div id="cuotas-opciones" style="display:flex;gap:8px;flex-wrap:wrap"></div>
           <div id="cuotas-info" style="margin-top:8px;background:#F7F6F3;border-radius:8px;padding:10px 12px;font-size:11px;color:#666"></div>
         </div>
@@ -2087,17 +2090,36 @@ def api_scrape_droppers():
             json_path = os.path.join(os.path.dirname(__file__), "productos_droppers.json")
             if os.path.exists(json_path):
                 with open(json_path, "r", encoding="utf-8") as f:
-                    productos = json.load(f)
-                # Filtrar por categoría si es posible
-                from scraper_droppers import CATEGORIAS_DROPPERS
-                cat_ml = CATEGORIAS_DROPPERS.get(categoria, {}).get("ml", "")
-                for p in productos:
+                    todos = json.load(f)
+                from scraper_droppers import CATEGORIAS_DROPPERS, ScraperDroppers
+                cat_info = CATEGORIAS_DROPPERS.get(categoria, {})
+                cat_ml = cat_info.get("ml", "")
+                cat_url = cat_info.get("url", "")
+
+                # Filtrar productos que correspondan a esta categoría
+                # Si el producto tiene campo categoria, filtramos; sino scrapeamos
+                productos_cat = [p for p in todos if p.get("categoria") == categoria]
+
+                if not productos_cat:
+                    # No hay filtro por categoría — intentar scrape real
+                    try:
+                        scraper = ScraperDroppers()
+                        productos_cat = scraper.scrape_categoria(categoria)
+                        if not productos_cat:
+                            # Fallback: usar todos con la categoría asignada
+                            productos_cat = todos
+                    except:
+                        productos_cat = todos
+
+                for p in productos_cat:
                     p["categoria_ml"] = cat_ml
-                scraper_estado["productos"] = productos
-                scraper_estado["total"] = len(productos)
-                scraper_estado["progreso"] = len(productos)
+                    p["categoria"] = categoria
+
+                scraper_estado["productos"] = productos_cat
+                scraper_estado["total"] = len(productos_cat)
+                scraper_estado["progreso"] = len(productos_cat)
                 scraper_estado["corriendo"] = False
-                log(f"✅ {len(productos)} productos cargados desde archivo para {categoria}")
+                log(f"✅ {len(productos_cat)} productos cargados para categoria '{categoria}'")
                 return
 
             # Si no hay archivo, intentar scrape online
