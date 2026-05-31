@@ -621,8 +621,8 @@ Devolvé SOLO JSON:
     def mejorar_calidad_publicacion(self, item_id, item_data, health_data):
         """
         Motor inteligente de mejora de calidad.
-        Analiza cada bucket del performance, consulta atributos requeridos de ML
-        y usa Claude para generar mejoras específicas por producto.
+        Usa incomplete_technical_specs para saber exactamente qué falta,
+        igual que el editor manual de ML.
         """
         try:
             score = health_data.get("overall", {}).get("points", 0)
@@ -631,19 +631,43 @@ Devolvé SOLO JSON:
 
             titulo_actual = item_data.get("title", "")
             categoria_id = item_data.get("category_id", "")
+            attrs_actuales = item_data.get("attributes", [])
 
-            # 1. Obtener atributos requeridos por la categoría de ML
-            atributos_requeridos = []
+            # 1. Obtener specs técnicas incompletas — igual que el editor de ML
+            specs_incompletas = []
             try:
-                r = self.ml.get(f"/categories/{categoria_id}/attributes")
-                atributos_requeridos = [
-                    {"id": a["id"], "name": a.get("name", ""), "required": a.get("tags", {}).get("required", False)}
-                    for a in r if a.get("tags", {}).get("required", False) or a.get("tags", {}).get("catalog_required", False)
-                ]
+                r = self.ml.get(f"/items/{item_id}/technical_specs/input")
+                groups = r.get("groups", [])
+                for group in groups:
+                    for comp in group.get("components", []):
+                        for attr in comp.get("attributes", []):
+                            if attr.get("tag") in ["required", "conditional_required"] or \
+                               not attr.get("value_id") and not attr.get("value_name"):
+                                specs_incompletas.append({
+                                    "id": attr.get("id"),
+                                    "name": attr.get("name", ""),
+                                    "hint": attr.get("hint", ""),
+                                    "values": [v.get("name") for v in attr.get("allowed_values", [])[:5]],
+                                })
             except:
                 pass
 
-            # 2. Obtener descripción actual
+            # 2. Obtener atributos requeridos por categoría
+            atributos_requeridos = []
+            try:
+                r = self.ml.get(f"/categories/{categoria_id}/attributes")
+                for a in r:
+                    tags = a.get("tags", {})
+                    if tags.get("required") or tags.get("catalog_required"):
+                        atributos_requeridos.append({
+                            "id": a["id"],
+                            "name": a.get("name", ""),
+                            "values": [v.get("name") for v in a.get("allowed_values", [])[:5]],
+                        })
+            except:
+                pass
+
+            # 3. Obtener descripción actual
             desc_actual = ""
             try:
                 desc_data = self.ml.get(f"/items/{item_id}/description")
@@ -651,73 +675,77 @@ Devolvé SOLO JSON:
             except:
                 pass
 
-            # 3. Analizar buckets del performance para saber qué falta
+            # 4. Analizar buckets del performance
             buckets = health_data.get("sections", [])
             problemas = []
+            mejoras = {}
             for b in buckets:
                 pts = b.get("points", 0)
                 total = b.get("total_points", 100)
+                key = b.get("section_id", "")
                 if pts < total * 0.7:
                     tips = [v.get("title", "") for v in b.get("tips", []) if v.get("status") == "PENDING"]
-                    problemas.append({
-                        "seccion": b.get("section_id", ""),
-                        "score": f"{pts}/{total}",
-                        "tips": tips[:3]
-                    })
+                    problemas.append(f"{key} ({pts}/{total}): {', '.join(tips[:2])}")
+                    if key == "DESCRIPTION": mejoras["descripcion"] = True
+                    if key == "MAIN_FEATURES": mejoras["atributos"] = True
 
-            mejoras = {}
-            if any(b.get("section_id") == "DESCRIPTION" and b.get("points", 0) < 15 for b in buckets):
-                mejoras["necesita_descripcion"] = True
-            if any(b.get("section_id") == "MAIN_FEATURES" and b.get("points", 0) < b.get("total_points", 20) * 0.6 for b in buckets):
-                mejoras["necesita_atributos"] = True
-            if any(b.get("section_id") == "PICTURES" and b.get("points", 0) < 20 for b in buckets):
-                mejoras["necesita_fotos"] = True
+            # 5. Prompt muy específico con datos reales de ML
+            specs_txt = "\n".join([
+                f"- {s['id']} ({s['name']}): opciones posibles: {', '.join(s['values']) if s['values'] else 'valor libre'}"
+                for s in specs_incompletas[:15]
+            ]) or "No se pudieron obtener specs"
 
-            # 4. Construir prompt muy específico para Claude
-            attrs_requeridos_txt = "\n".join([f"- {a['id']}: {a['name']}" for a in atributos_requeridos[:15]]) or "No se pudieron obtener"
-            problemas_txt = "\n".join([f"- {p['seccion']} ({p['score']}): {', '.join(p['tips'])}" for p in problemas]) or "Sin datos"
-            attrs_actuales = item_data.get("attributes", [])
-            attrs_actuales_txt = "\n".join([f"- {a.get('id')}: {a.get('value_name','')}" for a in attrs_actuales[:10]])
+            reqs_txt = "\n".join([
+                f"- {a['id']} ({a['name']}): {', '.join(a['values']) if a['values'] else 'valor libre'}"
+                for a in atributos_requeridos[:10]
+            ]) or "Sin atributos requeridos"
 
-            prompt = f"""Sos un experto certificado en el algoritmo de calidad de Mercado Libre Argentina.
-Analizá esta publicación y generá mejoras precisas para llevarla del {score}% al 80%+.
+            attrs_txt = "\n".join([
+                f"- {a.get('id')}: {a.get('value_name','')}"
+                for a in attrs_actuales[:10]
+            ]) or "Ninguno"
+
+            prompt = f"""Sos un experto en el algoritmo de calidad de Mercado Libre Argentina.
+Mejorá esta publicación para que llegue al 80%+ de calidad.
 
 PUBLICACIÓN:
-- ID: {item_id}
-- Título actual: {titulo_actual}
-- Categoría ML: {categoria_id}
-- Score actual: {score}/100
-
-DESCRIPCIÓN ACTUAL:
-{desc_actual[:300] if desc_actual else "SIN DESCRIPCIÓN — crítico, resta muchos puntos"}
+- Título: {titulo_actual}
+- Categoría: {categoria_id}
+- Score actual: {score}%
 
 ATRIBUTOS ACTUALES:
-{attrs_actuales_txt if attrs_actuales_txt else "Ninguno"}
+{attrs_txt}
 
-ATRIBUTOS REQUERIDOS POR ML PARA ESTA CATEGORÍA:
-{attrs_requeridos_txt}
+DESCRIPCIÓN ACTUAL:
+{desc_actual[:400] if desc_actual else "SIN DESCRIPCIÓN"}
 
-PROBLEMAS DETECTADOS POR ML:
-{problemas_txt}
+SPECS TÉCNICAS INCOMPLETAS (las que pide ML en su editor):
+{specs_txt}
+
+ATRIBUTOS REQUERIDOS POR CATEGORÍA:
+{reqs_txt}
+
+PROBLEMAS DETECTADOS:
+{chr(10).join(problemas) if problemas else "Sin datos"}
 
 INSTRUCCIONES:
-1. TÍTULO: 55-60 chars exactos, keyword principal al inicio, sin puntuación
-2. DESCRIPCIÓN: 200+ palabras. Incluir: características técnicas, materiales, dimensiones estimadas, uso, garantía 10 días, entrega 72hs hábiles
-3. ATRIBUTOS: completar TODOS los requeridos con valores reales y específicos según el producto. No usar "No especificado" — inferir del título
-4. Si el título menciona dimensiones, colores o materiales, usarlos en los atributos
+1. Completar TODOS los atributos de las specs incompletas con valores REALES inferidos del título
+2. Usar EXACTAMENTE los valores permitidos cuando se listen opciones (ej: si dice "Negro, Blanco, Azul", usar uno de esos)
+3. Título: 55-60 chars, keyword al inicio
+4. Descripción: 200+ palabras, características técnicas, garantía 10 días, entrega 72hs hábiles
 
 Devolvé SOLO JSON válido:
 {{
-  "titulo_nuevo": "título optimizado 55-60 chars",
-  "descripcion_nueva": "descripción 200+ palabras completa",
+  "titulo_nuevo": "título 55-60 chars",
+  "descripcion_nueva": "descripción 200+ palabras",
   "atributos_nuevos": [
     {{"id": "BRAND", "value_name": "Generico"}},
-    {{"id": "COLOR", "value_name": "inferir del titulo"}},
-    {{"id": "MATERIAL", "value_name": "inferir del titulo"}},
+    {{"id": "COLOR", "value_name": "valor real del título"}},
+    {{"id": "MATERIAL", "value_name": "valor real inferido"}},
     {{"id": "WITH_WARRANTY", "value_name": "Si"}},
     {{"id": "SELLER_SKU", "value_name": "SKU-AUTO"}}
   ],
-  "razon": "una línea explicando las mejoras principales",
+  "razon": "qué se mejoró en una línea",
   "score_estimado": 82
 }}"""
 
@@ -731,7 +759,7 @@ Devolvé SOLO JSON válido:
             texto = msg.content[0].text.strip()
             mejora = json.loads(texto[texto.find("{"):texto.rfind("}")+1])
 
-            # 5. Aplicar mejoras
+            # 6. Aplicar mejoras
             updates = {}
             titulo_nuevo = mejora.get("titulo_nuevo", "")
             if titulo_nuevo and titulo_nuevo != titulo_actual:
@@ -739,18 +767,25 @@ Devolvé SOLO JSON válido:
 
             atributos_nuevos = mejora.get("atributos_nuevos", [])
             if atributos_nuevos:
-                attrs_existentes = {a.get("id"): a for a in attrs_actuales}
+                attrs_map = {a.get("id"): a for a in attrs_actuales}
                 for a in atributos_nuevos:
-                    if a.get("value_name") and a.get("value_name") not in ["No especificado", "inferir del titulo"]:
-                        attrs_existentes[a["id"]] = a
-                updates["attributes"] = list(attrs_existentes.values())
+                    v = a.get("value_name", "")
+                    if v and v not in ["No especificado", "valor real del título", "valor real inferido", "SKU-AUTO"]:
+                        attrs_map[a["id"]] = a
+                    elif a["id"] == "SELLER_SKU":
+                        # Generar SKU real
+                        import re as _re
+                        palabras = _re.sub(r'[^a-zA-Z0-9\s]', '', titulo_actual).split()
+                        sku = "-".join(p[:4].upper() for p in palabras[:3]) + f"-{item_id[-4:]}"
+                        attrs_map["SELLER_SKU"] = {"id": "SELLER_SKU", "value_name": sku}
+                updates["attributes"] = list(attrs_map.values())
 
             if updates:
                 self.ml.put(f"/items/{item_id}", updates)
 
-            # 6. Actualizar descripción
+            # 7. Actualizar descripción
             desc_nueva = mejora.get("descripcion_nueva", "")
-            if desc_nueva and mejoras.get("necesita_descripcion"):
+            if desc_nueva and mejoras.get("descripcion"):
                 try:
                     if desc_actual:
                         self.ml.put(f"/items/{item_id}/description", {"plain_text": desc_nueva})
