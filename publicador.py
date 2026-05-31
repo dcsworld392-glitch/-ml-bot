@@ -69,44 +69,47 @@ class GeneradorListings:
                           atributos_requeridos=None):
         keywords = KEYWORDS_CATEGORIAS.get(categoria_ml, KEYWORDS_CATEGORIAS["default"])
         attrs_str = ", ".join(atributos_requeridos) if atributos_requeridos else "BRAND"
+        descripcion_droppers = producto.get("descripcion", "")
 
         prompt = f"""Sos un experto en SEO y ventas de Mercado Libre Argentina.
-Tu objetivo es crear publicaciones que aparezcan en los primeros resultados.
 
 PRODUCTO:
-- Título original: {producto.get('titulo', '')}
-- Descripción: {producto.get('descripcion', 'Sin descripción')}
+- Título: {producto.get('titulo', '')}
+- Descripción original de Droppers: {descripcion_droppers[:800] if descripcion_droppers else 'No disponible'}
 - Categoría ML: {categoria_ml}
 - Envío gratis: {"Sí" if envio_gratis else "No — entrega acordada con vendedor"}
-- Keywords de la categoría: {', '.join(keywords)}
-{f"- Precio promedio competencia: ${precio_competencia:,.0f}" if precio_competencia else ""}
+- Keywords: {', '.join(keywords)}
+{f"- Precio competencia: ${precio_competencia:,.0f}" if precio_competencia else ""}
 
-CONDICIONES DE VENTA (INCLUIR SIEMPRE):
-- Garantía: {GARANTIA_DIAS} días
-- Entrega: dentro de las 72 horas hábiles (3 días hábiles)
+CONDICIONES FIJAS:
+- Garantía: {GARANTIA_DIAS} días del vendedor
+- Entrega: 72 horas hábiles desde confirmación de pago
 - Estado: nuevo
 
 ATRIBUTOS REQUERIDOS POR ML: {attrs_str}
 
 REGLAS:
-1. TÍTULO: máximo 60 caracteres, sin puntuación innecesaria, sin caracteres especiales
-2. DESCRIPCIÓN: 150-250 palabras. Incluir beneficios, garantía de {GARANTIA_DIAS} días y plazo de entrega de 72 horas hábiles
-3. Completar TODOS los atributos requeridos con valores genéricos si no se conocen
+1. TÍTULO: máximo 60 caracteres, sin puntuación innecesaria
+2. DESCRIPCIÓN: 150-250 palabras. Basarte en la descripción original de Droppers si existe. Incluir garantía de {GARANTIA_DIAS} días y entrega en 72 horas hábiles
+3. Para categorías de juguetes o productos infantiles, incluir información regulatoria (edad mínima, advertencias de seguridad, normas IRAM si aplica)
+4. EAN: si el producto tiene código de barras conocido usarlo, sino usar "does_not_apply"
+5. Completar TODOS los atributos requeridos
 
 Devolvé SOLO JSON (sin texto adicional ni ```json):
 {{
   "titulo": "título de hasta 60 caracteres",
-  "descripcion": "descripción completa con garantía y plazo de entrega",
+  "descripcion": "descripción completa 150-250 palabras basada en descripción original",
+  "ean": "does_not_apply",
+  "informacion_regulatoria": "Completar solo si aplica para la categoría (ej juguetes: edad mínima 3 años, apto IRAM). Vacío si no aplica.",
   "atributos": [
-    {{"id": "BRAND", "value_name": "Genérico"}},
-    {{"id": "SELLER_SKU", "value_name": "SKU-001"}}
+    {{"id": "BRAND", "value_name": "Genérico"}}
   ],
   "score_estimado": 80
 }}"""
 
         msg = self.client.messages.create(
             model="claude-sonnet-4-5",
-            max_tokens=1000,
+            max_tokens=1200,
             messages=[{"role": "user", "content": prompt}]
         )
         texto = msg.content[0].text.strip()
@@ -266,6 +269,11 @@ class PublicadorML:
             if "BRAND" not in ids_presentes:
                 atributos_listing.insert(0, {"id": "BRAND", "value_name": "Genérico"})
 
+            # Agregar EAN si está disponible
+            ean = listing.get("ean", "does_not_apply")
+            if "GTIN" not in ids_presentes and "EAN" not in ids_presentes:
+                atributos_listing.append({"id": "GTIN", "value_name": ean})
+
             # Agregar atributos requeridos que falten
             for attr_id in atributos_requeridos:
                 if attr_id not in [a.get("id") for a in atributos_listing]:
@@ -277,10 +285,13 @@ class PublicadorML:
                 {"id": "WARRANTY_TIME",   "value_name": f"{GARANTIA_DIAS} días"},
             ]
 
-            # 8. Descripción con entrega
+            # 8. Descripción con entrega e info regulatoria
             descripcion = listing.get("descripcion", "")
             if "72" not in descripcion and "hábil" not in descripcion:
                 descripcion += f"\n\n📦 ENTREGA: Despachamos dentro de las 72 horas hábiles desde la confirmación del pago."
+            info_reg = listing.get("informacion_regulatoria", "")
+            if info_reg:
+                descripcion += f"\n\n⚠️ INFORMACIÓN REGULATORIA: {info_reg}"
 
             # 9. Subir imágenes a ML
             imagenes = []

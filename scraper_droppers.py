@@ -127,17 +127,18 @@ class ScraperDroppers:
                 print(f"Error página {pagina}: {e}")
                 break
 
-        # Obtener precios de las páginas de detalle (primeros 20)
+        # Obtener precios Y descripciones de las páginas de detalle (primeros 20)
         for prod in productos[:20]:
-            if prod["costo"] == 0 and prod["url"]:
+            if (prod["costo"] == 0 or not prod.get("descripcion")) and prod["url"]:
                 try:
                     detalle = self._scrape_detalle(prod["url"])
                     if detalle:
-                        prod["costo"] = detalle.get("costo", 0)
-                        if detalle.get("imagenes"):
-                            prod["imagenes"] = detalle["imagenes"]
-                        if detalle.get("descripcion"):
+                        if prod["costo"] == 0:
+                            prod["costo"] = detalle.get("costo", 0)
+                        if not prod.get("descripcion") and detalle.get("descripcion"):
                             prod["descripcion"] = detalle["descripcion"]
+                        if detalle.get("imagenes") and len(detalle["imagenes"]) > len(prod.get("imagenes",[])):
+                            prod["imagenes"] = detalle["imagenes"]
                 except:
                     pass
 
