@@ -1480,7 +1480,6 @@ def api_mejorar_calidad():
     try:
         from publicador import PublicadorML
         pub = PublicadorML(sistema.ml, CONFIG.get("ANTHROPIC_API_KEY", ""))
-        # Usar el user_id correcto
         user_id = CONFIG.get("ML_USER_ID", "211711561")
         items_data = sistema.ml.get(f"/users/{user_id}/items/search",
                                      params={"status": "active", "limit": 50})
@@ -1489,11 +1488,26 @@ def api_mejorar_calidad():
         mejorados = []
         for item_id in item_ids:
             try:
-                health = sistema.ml.get(f"/items/{item_id}/health")
-                score = health.get("overall", {}).get("points", 100)
+                # Usar /performance (reemplaza al discontinuado /health)
+                perf = sistema.ml.get(f"/items/{item_id}/performance")
+                score = perf.get("score", 100)
+                log(f"📊 {item_id}: score={score}")
                 if score < 75:
                     item_data = sistema.ml.get(f"/items/{item_id}")
-                    resultado = pub.mejorar_calidad_publicacion(item_id, item_data, health)
+                    # Convertir formato /performance al que usa mejorar_calidad_publicacion
+                    health_compat = {
+                        "overall": {"points": score},
+                        "sections": [
+                            {
+                                "section_id": b.get("key", ""),
+                                "points": b.get("score", 0),
+                                "total_points": 100,
+                                "tips": [{"tip": v.get("title", "")} for v in b.get("variables", []) if v.get("status") == "PENDING"]
+                            }
+                            for b in perf.get("buckets", [])
+                        ]
+                    }
+                    resultado = pub.mejorar_calidad_publicacion(item_id, item_data, health_compat)
                     if resultado.get("ok") and resultado.get("accion") != "ya_ok":
                         mejorados.append(resultado)
                         log(f"✅ {item_id}: {score}% → mejorado")
