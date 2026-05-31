@@ -828,7 +828,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
 
   <div style="text-align:center;padding-bottom:32px;display:flex;gap:10px;justify-content:center">
     <button class="cycle-btn" onclick="cicloCompleto()">Ejecutar ciclo completo</button>
-    <button class="cycle-btn" style="background:#185FA5" onclick="mejorarCalidad()">✨ Mejorar calidad publicaciones</button>
+    <button id="btn-mejorar-calidad" class="cycle-btn" style="background:#185FA5" onclick="mejorarCalidad()">✨ Mejorar calidad publicaciones</button>
     <button class="cycle-btn" style="background:#3B6D11" onclick="verHistorial()">📋 Historial de reportes</button>
   </div>
 </main>
@@ -1308,7 +1308,7 @@ async function analizarPromociones(){
 async function procesarPreguntas(){document.getElementById('actividad').innerHTML='<p class="loading">Procesando...</p>';await fetch('/api/procesar-preguntas',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},3000);}
 async function cicloCompleto(){await fetch('/api/ciclo',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},5000);}
 async function mejorarCalidad(){
-  const btn = document.querySelector('[onclick="mejorarCalidad()"]');
+  const btn = document.getElementById('btn-mejorar-calidad');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Iniciando...'; }
 
   const panel = document.getElementById('modal-mejora');
