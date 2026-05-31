@@ -620,8 +620,11 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
 .sug-desc{font-size:11px;color:#666;line-height:1.5;margin-bottom:7px}
 .tag{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:500}
 .tag-alto{background:#FCEBEB;color:#A32D2D}.tag-medio{background:#FAEEDA;color:#854F0B}.tag-bajo{background:#F7F6F3;color:#888;border:0.5px solid #e5e3de}
-.cycle-btn{background:#1a1a1a;color:#fff;border:none;padding:10px 24px;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif}
+.cycle-btn{background:#1a1a1a;color:#fff;border:none;padding:10px 24px;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;position:relative;overflow:hidden}
 .cycle-btn:hover{background:#333}
+.apple-loading{position:relative;overflow:hidden}
+.apple-loading::after{content:'';position:absolute;bottom:0;left:-100%;height:2px;width:100%;background:rgba(255,255,255,.55);animation:appleBar 1.6s cubic-bezier(.4,0,.6,1) infinite}
+@keyframes appleBar{0%{left:-100%}50%{left:20%}100%{left:110%}}
 @media(max-width:700px){.g4{grid-template-columns:1fr 1fr}.g2,.g3{grid-template-columns:1fr}}
 </style>
 </head>
@@ -1387,7 +1390,7 @@ async function procesarPreguntas(){document.getElementById('actividad').innerHTM
 async function cicloCompleto(){await fetch('/api/ciclo',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},5000);}
 async function mejorarCalidad(){
   const btn = document.getElementById('btn-mejorar-calidad');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Iniciando...'; }
+  if (btn) { btn.disabled = true; btn.textContent = '✨ Mejorando...'; btn.classList.add('apple-loading'); }
 
   const panel = document.getElementById('modal-mejora');
   panel.style.display = 'block';
@@ -1404,7 +1407,7 @@ async function mejorarCalidad(){
     const d = await resp.json();
     if (!d.ok) {
       document.getElementById('mejora-txt').textContent = 'Error: ' + (d.error || 'desconocido');
-      if (btn) { btn.disabled = false; btn.textContent = '✨ Mejorar calidad publicaciones'; }
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Mejorar calidad publicaciones'; btn.classList.remove('apple-loading'); }
       return;
     }
   } catch(e) {
@@ -1641,8 +1644,9 @@ async function verEstrategiaIA(itemId, btn) {
     btn.textContent = '🧠 Estrategia IA';
     return;
   }
-  btn.textContent = '⏳ Analizando...';
+  btn.textContent = '🧠 Analizando...';
   btn.disabled = true;
+  btn.classList.add('apple-loading');
   panel.style.display = 'block';
   panel.innerHTML = '<p style="font-size:11px;color:#999;padding:8px 0">Analizando mercado y competencia...</p>';
 
@@ -1651,6 +1655,7 @@ async function verEstrategiaIA(itemId, btn) {
     const d = await r.json();
     btn.textContent = '🧠 Estrategia IA';
     btn.disabled = false;
+    btn.classList.remove('apple-loading');
 
     if (!d.ok) { panel.innerHTML = `<p style="color:#A32D2D;font-size:11px">${d.error}</p>`; return; }
 
@@ -1659,62 +1664,87 @@ async function verEstrategiaIA(itemId, btn) {
     const urgTextos = {alta:'#A32D2D', media:'#854F0B', baja:'#3B6D11'};
 
     panel.innerHTML = `
-      <div style="background:#F7F6F3;border-radius:8px;padding:14px;border:0.5px solid #e5e3de">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="background:#F7F6F3;border-radius:12px;padding:16px;border:0.5px solid #e5e3de">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <p style="font-size:12px;font-weight:600;color:#1a1a1a">🧠 Estrategia de marketing — Hoy</p>
-          <span style="background:${urgColores[e.urgencia]};color:${urgTextos[e.urgencia]};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600">
+          <span style="background:${urgColores[e.urgencia]};color:${urgTextos[e.urgencia]};padding:2px 10px;border-radius:20px;font-size:10px;font-weight:600">
             Urgencia: ${e.urgencia}
           </span>
         </div>
 
-        <p style="font-size:11px;color:#666;margin-bottom:10px;line-height:1.5">${e.situacion}</p>
+        <p style="font-size:11px;color:#666;margin-bottom:12px;line-height:1.6">${e.situacion}</p>
 
-        <div style="background:white;border-radius:6px;padding:10px 12px;margin-bottom:10px;border:0.5px solid #e5e3de">
+        <div style="background:white;border-radius:10px;padding:12px 14px;margin-bottom:12px;border:0.5px solid #e5e3de">
           <p style="font-size:11px;font-weight:600;color:#185FA5;margin-bottom:4px">📌 Recomendación principal</p>
-          <p style="font-size:12px;color:#1a1a1a;margin-bottom:8px">${e.recomendacion_principal}</p>
+          <p style="font-size:12px;color:#1a1a1a;margin-bottom:10px;line-height:1.5">${e.recomendacion_principal}</p>
           <button onclick="aplicarRecomendacion('${itemId}', ${e.precio_sugerido}, ${e.descuento_sugerido_pct||0}, '${e.herramienta_recomendada}', this)"
-            style="background:#185FA5;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
+            id="btn-aplicar-rec-${itemId}"
+            style="background:#185FA5;color:#fff;border:none;padding:8px 16px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;position:relative;overflow:hidden;transition:all .3s">
             ⚡ Aplicar recomendación
+            <span id="bar-rec-${itemId}" style="position:absolute;bottom:0;left:0;height:2px;background:rgba(255,255,255,.5);width:0%;transition:width .3s ease"></span>
           </button>
-          <div id="rec-resultado-${itemId}" style="margin-top:6px;font-size:11px"></div>
+          <div id="rec-resultado-${itemId}" style="margin-top:8px;font-size:11px"></div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <div style="background:white;border-radius:6px;padding:8px 10px;border:0.5px solid #e5e3de">
-            <p style="font-size:10px;color:#999;margin-bottom:2px">Precio sugerido</p>
-            <p style="font-size:14px;font-weight:700;color:#3B6D11">$${e.precio_sugerido?.toLocaleString('es-AR')}</p>
-            <p style="font-size:10px;color:#666">${e.precio_sugerido_razon}</p>
+        ${d.costo_producto > 0 ? `
+        <div style="background:white;border-radius:10px;padding:12px 14px;margin-bottom:12px;border:0.5px solid #e5e3de">
+          <p style="font-size:11px;font-weight:600;color:#1a1a1a;margin-bottom:10px">💰 Desglose de costos — Precio sugerido $${e.precio_sugerido?.toLocaleString('es-AR')}</p>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:0.5px solid #f0ede8">
+              <span style="color:#666">🏭 Costo Droppers</span>
+              <span><strong>$${d.costo_producto?.toLocaleString('es-AR')}</strong> <span style="color:#999">(${d.costo_pct||0}%)</span></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:0.5px solid #f0ede8">
+              <span style="color:#666">📋 Comisión ML</span>
+              <span><strong>$${d.comision?.toLocaleString('es-AR')}</strong> <span style="color:#999">(${d.comision_pct||0}%)</span></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:0.5px solid #f0ede8">
+              <span style="color:#666">🏛️ IVA + IIBB</span>
+              <span><strong>$${d.iva_iibb?.toLocaleString('es-AR')}</strong> <span style="color:#999">(${d.iva_iibb_pct||0}%)</span></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1.5px solid #1a1a1a;margin-top:2px">
+              <span style="font-weight:700">GANANCIA NETA</span>
+              <span style="font-weight:700;color:${d.ganancia>0?'#3B6D11':'#A32D2D'}">$${d.ganancia?.toLocaleString('es-AR')} <span style="font-size:10px">(${d.margen_pct||0}%)</span></span>
+            </div>
           </div>
-          <div style="background:white;border-radius:6px;padding:8px 10px;border:0.5px solid #e5e3de">
-            <p style="font-size:10px;color:#999;margin-bottom:2px">Herramienta recomendada</p>
+        </div>` : ''}
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <div style="background:white;border-radius:10px;padding:10px 12px;border:0.5px solid #e5e3de">
+            <p style="font-size:10px;color:#999;margin-bottom:3px">Precio sugerido</p>
+            <p style="font-size:15px;font-weight:700;color:#3B6D11">$${e.precio_sugerido?.toLocaleString('es-AR')}</p>
+            <p style="font-size:10px;color:#666;line-height:1.4">${e.precio_sugerido_razon}</p>
+          </div>
+          <div style="background:white;border-radius:10px;padding:10px 12px;border:0.5px solid #e5e3de">
+            <p style="font-size:10px;color:#999;margin-bottom:3px">Herramienta recomendada</p>
             <p style="font-size:12px;font-weight:600;color:#1a1a1a">${e.herramienta_recomendada}</p>
-            <p style="font-size:10px;color:#666">${e.herramienta_razon}</p>
+            <p style="font-size:10px;color:#666;line-height:1.4">${e.herramienta_razon}</p>
           </div>
         </div>
 
         ${d.competidores?.length > 0 ? `
-        <div style="margin-bottom:10px">
-          <p style="font-size:11px;font-weight:600;color:#1a1a1a;margin-bottom:6px">📊 Competencia analizada</p>
+        <div style="margin-bottom:12px">
+          <p style="font-size:11px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📊 Competencia analizada</p>
           <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">
             ${d.competidores.slice(0,4).map(c => `
-              <div style="flex-shrink:0;background:white;border:0.5px solid #e5e3de;border-radius:6px;padding:6px 10px;min-width:120px">
-                <p style="font-size:10px;color:#1a1a1a;margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${c.titulo}</p>
-                <p style="font-size:12px;font-weight:600;color:#185FA5">$${c.precio?.toLocaleString('es-AR')}</p>
-                <p style="font-size:10px;color:${c.envio_gratis?'#3B6D11':'#999'}">${c.envio_gratis?'✅ Envío gratis':'Sin envío'}</p>
+              <div style="flex-shrink:0;background:white;border:0.5px solid #e5e3de;border-radius:10px;padding:8px 10px;min-width:120px">
+                <p style="font-size:10px;color:#1a1a1a;margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3">${c.titulo}</p>
+                <p style="font-size:12px;font-weight:700;color:#185FA5">$${c.precio?.toLocaleString('es-AR')}</p>
+                <p style="font-size:9px;color:${c.envio_gratis?'#3B6D11':'#999'}">${c.envio_gratis?'✅ Envío gratis':'Sin envío'}</p>
               </div>`).join('')}
           </div>
         </div>` : ''}
 
-        <div style="margin-bottom:10px">
-          <p style="font-size:11px;font-weight:600;color:#1a1a1a;margin-bottom:6px">✅ Acciones recomendadas</p>
-          ${(e.acciones_adicionales||[]).map(a => `<p style="font-size:11px;color:#666;padding:3px 0;border-bottom:0.5px solid #f0ede8">→ ${a}</p>`).join('')}
+        <div style="margin-bottom:12px">
+          <p style="font-size:11px;font-weight:600;color:#1a1a1a;margin-bottom:8px">✅ Acciones recomendadas</p>
+          ${(e.acciones_adicionales||[]).map(a => `<p style="font-size:11px;color:#666;padding:4px 0;border-bottom:0.5px solid #f0ede8;line-height:1.5">→ ${a}</p>`).join('')}
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
           <p style="font-size:11px;color:#666">📈 Potencial: <strong>${e.potencial_ventas}</strong></p>
           ${e.descuento_sugerido_pct > 0 ? `
           <button onclick="abrirModalPromoConDescuento('${itemId}', ${e.descuento_sugerido_pct})"
-            style="background:#639922;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
+            style="background:#639922;color:#fff;border:none;padding:7px 14px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
             🏷️ Aplicar descuento sugerido (${e.descuento_sugerido_pct}%)
           </button>` : ''}
         </div>
@@ -1723,12 +1753,14 @@ async function verEstrategiaIA(itemId, btn) {
     panel.innerHTML = '<p style="color:#A32D2D;font-size:11px">Error al analizar</p>';
     btn.textContent = '🧠 Estrategia IA';
     btn.disabled = false;
+    btn.classList.remove('apple-loading');
   }
 }
 
 async function aplicarRecomendacion(itemId, precioSugerido, descuentoPct, herramienta, btn) {
-  btn.textContent = '⏳ Verificando...';
+  btn.textContent = '⚡ Aplicando...';
   btn.disabled = true;
+  btn.classList.add('apple-loading');
   const resEl = document.getElementById(`rec-resultado-${itemId}`);
 
   try {
@@ -1747,12 +1779,14 @@ async function aplicarRecomendacion(itemId, precioSugerido, descuentoPct, herram
     if (d.ok) {
       btn.textContent = '✅ Aplicado';
       btn.style.background = '#3B6D11';
+      btn.classList.remove('apple-loading');
       resEl.innerHTML = `<span style="color:#3B6D11">✅ Precio actualizado a $${d.precio_aplicado?.toLocaleString('es-AR')} · Margen: ${d.margen_pct}% · Ganancia: $${d.ganancia?.toLocaleString('es-AR')}</span>`;
       // Actualizar precio en la card
       setTimeout(() => cargarReportePub(), 2000);
     } else {
       btn.textContent = '⚡ Aplicar recomendación';
       btn.disabled = false;
+      btn.classList.remove('apple-loading');
       resEl.innerHTML = `<span style="color:#A32D2D">❌ ${d.error}</span>`;
     }
   } catch(e) {
@@ -1770,17 +1804,13 @@ async function abrirModalPromoConDescuento(itemId, pct) {
 }
 
 async function mejorarPublicacionIndividual(itemId, btn) {
-  btn.textContent = '⏳ 0%';
+  btn.textContent = '✨ Mejorando...';
   btn.disabled = true;
-  btn.style.opacity = '.8';
+  btn.style.opacity = '1';
   btn.style.background = '#185FA5';
+  btn.classList.add('apple-loading');
 
-  // Progreso visual mientras trabaja
-  let pct = 0;
-  const progIv = setInterval(() => {
-    pct = Math.min(pct + 5, 90);
-    btn.textContent = `⏳ ${pct}%`;
-  }, 800);
+  // No mostrar porcentaje - Apple style
 
   try {
     const r = await fetch('/api/mejorar-publicacion-individual', {
@@ -1789,12 +1819,12 @@ async function mejorarPublicacionIndividual(itemId, btn) {
       body: JSON.stringify({item_id: itemId})
     });
     const d = await r.json();
-    clearInterval(progIv);
 
     if (d.ok && d.accion !== 'ya_ok') {
       btn.textContent = `✅ ${d.score_anterior||'?'}% → ${d.score_estimado||80}%`;
       btn.style.background = '#3B6D11';
       btn.style.opacity = '1';
+      btn.classList.remove('apple-loading');
       // Actualizar solo el badge de calidad sin recargar toda la lista
       const card = btn.closest('div');
       if (card) {
@@ -1818,7 +1848,6 @@ async function mejorarPublicacionIndividual(itemId, btn) {
       btn.style.opacity = '1';
     }
   } catch(e) {
-    clearInterval(progIv);
     btn.textContent = '❌ Error';
     btn.style.background = '#A32D2D';
     btn.disabled = false;
@@ -2778,6 +2807,40 @@ Considerando todo esto, generá una estrategia completa. Devolvé SOLO JSON:
         texto = msg.content[0].text.strip()
         estrategia = json.loads(texto[texto.find("{"):texto.rfind("}")+1])
 
+        # Calcular desglose de costos para el precio sugerido
+        from costos import CalculadoraCostos
+        calc_costos = CalculadoraCostos()
+        costo_producto = 0
+        desglose_costos = {}
+
+        try:
+            json_path = os.path.join(os.path.dirname(__file__), "productos_droppers.json")
+            if os.path.exists(json_path):
+                with open(json_path, "r", encoding="utf-8") as f:
+                    productos_json = json.load(f)
+                titulo_lower = titulo.lower().split()[:4]
+                for p in productos_json:
+                    pt = p.get("titulo", "").lower().split()[:4]
+                    if sum(1 for w in titulo_lower if w in pt) >= 2 and p.get("costo", 0) > 0:
+                        costo_producto = p["costo"]
+                        break
+        except:
+            pass
+
+        precio_para_desglose = estrategia.get("precio_sugerido", precio)
+        if costo_producto > 0 and precio_para_desglose > 0:
+            c = calc_costos.calcular(precio_para_desglose, costo_producto, "default", False)
+            desglose_costos = {
+                "costo_producto": costo_producto,
+                "costo_pct": round(costo_producto / precio_para_desglose * 100, 1),
+                "comision": c["comision_ml"],
+                "comision_pct": c["tasa_comision_pct"],
+                "iva_iibb": round(c["iva_comision"] + c["iibb"], 2),
+                "iva_iibb_pct": round((c["iva_comision"] + c["iibb"]) / precio_para_desglose * 100, 1),
+                "ganancia": c["ganancia_neta"],
+                "margen_pct": c["margen_neto_pct"],
+            }
+
         return jsonify({
             "ok": True,
             "item_id": item_id,
@@ -2787,6 +2850,7 @@ Considerando todo esto, generá una estrategia completa. Devolvé SOLO JSON:
             "precio_min_comp": precio_min_comp,
             "precio_mediano_comp": precio_mediano_comp,
             "estrategia": estrategia,
+            **desglose_costos,
         })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
