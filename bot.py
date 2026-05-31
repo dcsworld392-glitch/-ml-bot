@@ -1463,6 +1463,17 @@ def api_precio_ml():
         return jsonify({"precio_mediano": None, "error": str(e)})
 
 
+@app.route("/api/mis-publicaciones")
+def api_mis_publicaciones():
+    """Diagnóstico: lista las publicaciones activas del usuario."""
+    try:
+        user_id = CONFIG.get("ML_USER_ID", "")
+        r = sistema.ml.get(f"/users/{user_id}/items/search", params={"status": "active", "limit": 10})
+        return jsonify({"user_id": user_id, "resultado": r})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
 @app.route("/api/mejorar-calidad", methods=["POST"])
 def api_mejorar_calidad():
     """Mejora todas las publicaciones con puntaje bajo a 75%+."""
