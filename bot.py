@@ -1727,7 +1727,8 @@ async function abrirModalPromoConDescuento(itemId, pct) {
   if (!item) return;
   await abrirModalPromo(itemId, item.titulo, item.precio);
 }
-  btn.textContent = '⏳ Mejorando...';
+
+async function mejorarPublicacionIndividual(itemId, btn) {
   btn.disabled = true;
   btn.style.opacity = '.6';
   try {
