@@ -1780,169 +1780,72 @@ def api_historial_reportes():
 @app.route("/api/reporte-calidad-pdf/<reporte_id>")
 @app.route("/api/reporte-calidad-pdf")
 def api_reporte_calidad_pdf(reporte_id=None):
-    """Genera un reporte PDF de las publicaciones mejoradas."""
+    """Genera reporte como HTML (imprimible como PDF desde el browser)."""
     try:
-        from reportlab.pdfgen import canvas
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.colors import HexColor, black, white
-        import io
-
-        # Cargar datos
+        global mejora_progreso
         if reporte_id:
-            # Intentar cargar desde GitHub primero
             datos = cargar_reporte_github(reporte_id)
             if not datos:
-                # Fallback a /tmp
                 archivo = os.path.join(HISTORIAL_DIR, f"{reporte_id}.json")
-                if os.path.exists(archivo):
-                    with open(archivo) as f:
-                        datos = json.load(f)
-                else:
-                    datos = mejora_progreso
+                datos = json.load(open(archivo)) if os.path.exists(archivo) else mejora_progreso
         else:
             datos = mejora_progreso
 
-        def safe(txt):
-            """Convierte texto a ASCII seguro para ReportLab."""
-            if not txt:
-                return ""
-            replacements = {'á':'a','é':'e','í':'i','ó':'o','ú':'u','ñ':'n','ü':'u',
-                           'Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U','Ñ':'N',
-                           '→':'->', '—':'-', '✅':'OK', '❌':'X', '•':'-',
-                           '\u2019':"'", '\u201c':'"', '\u201d':'"'}
-            for k, v in replacements.items():
-                txt = txt.replace(k, v)
-            return txt.encode('ascii', 'replace').decode('ascii')
-
-        buffer = io.BytesIO()
-        w, h = A4
-        c = canvas.Canvas(buffer, pagesize=A4)
-
-        margin = 50
-        y = h - margin
-        line_h = 16
-        col_verde = HexColor('#3B6D11')
-        col_azul = HexColor('#185FA5')
-        col_gris = HexColor('#666666')
-        col_rojo = HexColor('#A32D2D')
-
-        def nueva_pagina_si_necesario(c, y, espacio=40):
-            if y < margin + espacio:
-                c.showPage()
-                return h - margin
-            return y
-
-        # Encabezado
-        c.setFillColor(col_azul)
-        c.rect(0, h-70, w, 70, fill=1, stroke=0)
-        c.setFillColor(white)
-        c.setFont("Helvetica-Bold", 20)
-        c.drawString(margin, h-40, "Simple's - Reporte de Calidad de Publicaciones")
-        c.setFont("Helvetica", 11)
-        c.drawString(margin, h-58, f"Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        y = h - 90
-
-        # Resumen
         total = datos.get("total", 0)
         mejorados = datos.get("mejorados", 0)
         resultados = datos.get("resultados", [])
         ok_list = [r for r in resultados if r.get("ok") and not r.get("ya_ok")]
         ya_ok_list = [r for r in resultados if r.get("ya_ok")]
+        fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-        c.setFillColor(col_azul)
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(margin, y, "Resumen")
-        y -= line_h + 4
+        filas = ""
+        for i, r in enumerate(ok_list, 1):
+            titulo = r.get("titulo", r.get("item_id", ""))
+            score_ant = r.get("score_anterior", "?")
+            score_est = r.get("score_estimado", 82)
+            mejoras = ", ".join(r.get("mejoras_aplicadas", []))
+            filas += f"<tr><td>{i}</td><td>{titulo}</td><td style=\'color:#c0392b\'>{score_ant}%</td><td style=\'color:#27ae60\'>{score_est}%</td><td>{mejoras}</td></tr>"
 
-        datos_resumen = [
-            (f"Total revisadas: {total}", col_gris),
-            (f"Mejoradas a 75%+: {mejorados}", col_verde),
-            (f"Ya estaban en 75%+: {len(ya_ok_list)}", col_gris),
-        ]
-        c.setFont("Helvetica", 11)
-        for txt, color in datos_resumen:
-            c.setFillColor(color)
-            c.drawString(margin + 10, y, txt)
-            y -= line_h
-
-        y -= 10
-        c.setStrokeColor(HexColor('#e5e3de'))
-        c.line(margin, y, w - margin, y)
-        y -= 14
-
-        # Detalle publicaciones mejoradas
-        if ok_list:
-            c.setFillColor(col_azul)
-            c.setFont("Helvetica-Bold", 13)
-            c.drawString(margin, y, f"Publicaciones mejoradas ({len(ok_list)})")
-            y -= line_h + 4
-
-            for i, r in enumerate(ok_list, 1):
-                y = nueva_pagina_si_necesario(c, y)
-                titulo = safe(r.get('titulo', r.get('item_id', '')))[:65]
-                score_ant = r.get('score_anterior', '?')
-                score_est = r.get('score_estimado', 82)
-                mejoras = r.get('mejoras_aplicadas', [])
-
-                c.setFillColor(black)
-                c.setFont("Helvetica-Bold", 10)
-                c.drawString(margin + 5, y, f"{i}. {titulo}")
-                y -= 13
-
-                c.setFillColor(col_verde)
-                c.setFont("Helvetica", 10)
-                c.drawString(margin + 15, y, f"Score: {score_ant}% -> {score_est}% estimado")
-                y -= 12
-
-                if mejoras:
-                    c.setFillColor(col_gris)
-                    c.setFont("Helvetica", 9)
-                    c.drawString(margin + 15, y, f"Mejoras: {', '.join(mejoras)}")
-                    y -= 12
-
-                y -= 4
-
-        y -= 10
-        c.setStrokeColor(HexColor('#e5e3de'))
-        c.line(margin, y, w - margin, y)
-        y -= 14
-        y = nueva_pagina_si_necesario(c, y, 120)
-
-        # Recomendaciones
-        c.setFillColor(col_azul)
-        c.setFont("Helvetica-Bold", 13)
-        c.drawString(margin, y, "Recomendaciones para mejorar mas")
-        y -= line_h + 4
-
-        recs = [
-            "Agregar codigo universal (GTIN/EAN) a cada producto.",
-            "Subir al menos 4 fotos por publicacion en fondo blanco.",
-            "Completar caracteristicas secundarias (peso, dimensiones, material).",
-            "Activar Mercado Envios para mayor visibilidad.",
-            "Responder preguntas en menos de 1 hora.",
-            "Ofrecer devoluciones para aumentar la confianza.",
-        ]
-        c.setFont("Helvetica", 10)
-        for rec in recs:
-            y = nueva_pagina_si_necesario(c, y)
-            c.setFillColor(col_gris)
-            c.drawString(margin + 10, y, f"- {rec}")
-            y -= line_h
-
-        # Pie
-        c.setFillColor(col_gris)
-        c.setFont("Helvetica", 8)
-        c.drawString(margin, margin - 15, "Simple's - Sistema de automatizacion para Mercado Libre Argentina")
-
-        c.save()
-        buffer.seek(0)
+        html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Reporte Calidad Simple\'s</title>
+<style>
+body{{font-family:Arial,sans-serif;margin:40px;color:#1a1a1a;font-size:13px}}
+h1{{color:#185FA5;font-size:22px}}h2{{color:#185FA5;border-bottom:1px solid #ddd;padding-bottom:6px}}
+.cards{{display:flex;gap:16px;margin:20px 0}}.card{{background:#f5f5f5;border-radius:8px;padding:14px 20px;text-align:center;min-width:100px}}
+.num{{font-size:28px;font-weight:bold}}.lbl{{font-size:11px;color:#666}}
+table{{width:100%;border-collapse:collapse;margin-top:12px}}
+th{{background:#185FA5;color:white;padding:8px 10px;text-align:left;font-size:12px}}
+td{{padding:7px 10px;border-bottom:1px solid #f0ede8;font-size:12px}}
+tr:nth-child(even){{background:#f9f9f9}}
+ul li{{margin-bottom:8px}}.footer{{margin-top:40px;color:#999;font-size:11px;border-top:1px solid #ddd;padding-top:10px}}
+@media print{{.no-print{{display:none}}}}
+</style></head><body>
+<div class="no-print" style="background:#185FA5;color:white;padding:10px 20px;border-radius:8px;margin-bottom:20px;cursor:pointer" onclick="window.print()">
+  🖨️ Imprimir / Guardar como PDF (Ctrl+P)
+</div>
+<h1>Simple\'s - Reporte de Calidad de Publicaciones</h1>
+<p style="color:#666;font-size:12px">Generado el {fecha}</p>
+<div class="cards">
+  <div class="card"><div class="num" style="color:#185FA5">{total}</div><div class="lbl">Revisadas</div></div>
+  <div class="card"><div class="num" style="color:#27ae60">{mejorados}</div><div class="lbl">Mejoradas</div></div>
+  <div class="card"><div class="num">{len(ya_ok_list)}</div><div class="lbl">Ya OK</div></div>
+</div>
+<h2>Publicaciones mejoradas ({len(ok_list)})</h2>
+<table><tr><th>#</th><th>Producto</th><th>Score anterior</th><th>Score estimado</th><th>Mejoras</th></tr>
+{filas}</table>
+<h2>Recomendaciones</h2><ul>
+<li>Agregar codigo universal (GTIN/EAN) a cada producto.</li>
+<li>Subir al menos 4 fotos por publicacion en fondo blanco.</li>
+<li>Completar caracteristicas secundarias: peso, dimensiones, material.</li>
+<li>Activar Mercado Envios para mayor visibilidad.</li>
+<li>Responder preguntas en menos de 1 hora.</li>
+<li>Ofrecer devoluciones para aumentar la confianza.</li>
+</ul>
+<div class="footer">Simple\'s - Sistema de automatizacion Mercado Libre Argentina</div>
+</body></html>"""
 
         from flask import Response
-        return Response(
-            buffer.getvalue(),
-            mimetype='application/pdf',
-            headers={'Content-Disposition': f'attachment; filename=reporte_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf'}
-        )
+        return Response(html, mimetype="text/html")
     except Exception as e:
         import traceback
         return jsonify({"error": str(e), "trace": traceback.format_exc()[-500:]})
