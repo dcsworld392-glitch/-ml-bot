@@ -1529,10 +1529,57 @@ function renderTablaPublicaciones(pubs) {
   const el = document.getElementById('tabla-publicaciones');
   if (!pubs.length) { el.innerHTML = '<p style="font-size:12px;color:#999;text-align:center;padding:20px">No hay publicaciones activas.</p>'; return; }
 
-  const coloresCalidad = {verde:'#EAF3DE', amarillo:'#FAEEDA', rojo:'#FCEBEB', gris:'#F7F6F3'};
-  const textosCalidad = {verde:'#3B6D11', amarillo:'#854F0B', rojo:'#A32D2D', gris:'#999'};
+  const colBg = {verde:'#EAF3DE', amarillo:'#FAEEDA', rojo:'#FCEBEB', gris:'#F7F6F3'};
+  const colTxt = {verde:'#3B6D11', amarillo:'#854F0B', rojo:'#A32D2D', gris:'#999'};
 
-  el.innerHTML = pubs.map(p => `
+  el.innerHTML = pubs.map(p => {
+    const d = p.desglose || {};
+    const tieneCosto = p.costo > 0 && d.costo_droppers;
+    const precio = p.precio || 0;
+
+    // Desglose detallado
+    let desgloseHtml = '';
+    if (tieneCosto) {
+      const envio = d.costo_envio || 0;
+      const subtotalGastos = (d.costo_droppers||0) + (d.comision_ml||0) + (d.iva_iibb||0) + envio;
+      const ganancia = precio - subtotalGastos;
+      desgloseHtml = `
+      <div style="background:#F7F6F3;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px">
+        <p style="font-weight:600;color:#1a1a1a;margin-bottom:8px;font-size:12px">💰 Precio de venta: $${precio.toLocaleString('es-AR')}</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #e5e3de">
+            <span style="color:#666">🏭 Costo Droppers</span>
+            <span><strong>$${(d.costo_droppers||0).toLocaleString('es-AR')}</strong> <span style="color:#999">(${d.costo_droppers_pct||0}%)</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #e5e3de">
+            <span style="color:#666">📋 Comisión ML</span>
+            <span><strong>$${(d.comision_ml||0).toLocaleString('es-AR')}</strong> <span style="color:#999">(${d.comision_ml_pct||0}%)</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #e5e3de">
+            <span style="color:#666">🏛️ IVA + IIBB</span>
+            <span><strong>$${(d.iva_iibb||0).toLocaleString('es-AR')}</strong> <span style="color:#999">(${d.iva_iibb_pct||0}%)</span></span>
+          </div>
+          ${envio > 0 ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #e5e3de">
+            <span style="color:#666">🚚 Envío gratis</span>
+            <span><strong>$${envio.toLocaleString('es-AR')}</strong></span>
+          </div>` : ''}
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #e5e3de;margin-top:4px">
+          <span style="color:#666;font-weight:500">Subtotal gastos</span>
+          <span style="font-weight:600;color:#A32D2D">− $${subtotalGastos.toLocaleString('es-AR')}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:2px solid #1a1a1a;margin-top:4px">
+          <span style="font-weight:700;font-size:12px">GANANCIA NETA</span>
+          <span style="font-weight:700;font-size:13px;color:${ganancia>0?'#3B6D11':'#A32D2D'}">$${ganancia.toLocaleString('es-AR')} <span style="font-size:11px">(${d.margen_pct||0}%)</span></span>
+        </div>
+      </div>`;
+    } else {
+      desgloseHtml = `<div style="background:#F7F6F3;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#999">
+        💰 Precio: <strong style="color:#1a1a1a">$${precio.toLocaleString('es-AR')}</strong> · Sin costo de Droppers cargado
+      </div>`;
+    }
+
+    return `
     <div style="background:white;border:0.5px solid #e5e3de;border-radius:10px;padding:14px;margin-bottom:10px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
         <div style="flex:1;min-width:0">
@@ -1540,40 +1587,59 @@ function renderTablaPublicaciones(pubs) {
           <p style="font-size:11px;color:#666;margin-top:2px">${p.item_id} · ${p.listing_type}</p>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
-          <span style="background:${coloresCalidad[p.calidad_color]};color:${textosCalidad[p.calidad_color]};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600">${p.calidad_label}</span>
+          <span style="background:${colBg[p.calidad_color]};color:${colTxt[p.calidad_color]};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600">${p.calidad_label}</span>
           <span style="background:${p.stock<=2?'#FCEBEB':'#F7F6F3'};color:${p.stock<=2?'#A32D2D':'#666'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600">📦 ${p.stock} u.</span>
+          ${p.promo_activa ? '<span style="background:#EAF3DE;color:#3B6D11;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600">🏷️ En oferta</span>' : ''}
         </div>
       </div>
 
-      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;margin-bottom:10px">
-        <span>💰 Precio: <strong>$${p.precio?.toLocaleString('es-AR')}</strong></span>
-        ${p.costo > 0 ? `<span>🏭 Costo: <strong style="color:#185FA5">$${p.costo?.toLocaleString('es-AR')}</strong></span>` : ''}
-        ${p.desglose?.margen_pct ? `<span>📈 Margen: <strong style="color:#3B6D11">${p.desglose.margen_pct}%</strong></span>` : ''}
-        ${p.promo_activa ? `<span style="color:#3B6D11">✅ Con promoción</span>` : `<span style="color:#999">Sin promoción</span>`}
-      </div>
-
-      ${p.desglose && p.costo > 0 ? `
-      <div style="background:#F7F6F3;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#666">
-        <span style="margin-right:12px">Costo Droppers: $${p.desglose.costo_droppers?.toLocaleString('es-AR')} (${p.desglose.costo_droppers_pct}%)</span>
-        <span style="margin-right:12px">Comisión ML: $${p.desglose.comision_ml?.toLocaleString('es-AR')} (${p.desglose.comision_ml_pct}%)</span>
-        <span style="margin-right:12px">IVA+IIBB: $${p.desglose.iva_iibb?.toLocaleString('es-AR')} (${p.desglose.iva_iibb_pct}%)</span>
-        <span style="color:#3B6D11;font-weight:600">Ganancia: $${p.desglose.ganancia_neta?.toLocaleString('es-AR')}</span>
-      </div>` : ''}
+      ${desgloseHtml}
 
       <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${p.calidad_score < 75 ? `<button onclick="mejorarPublicacionIndividual('${p.item_id}', this)"
+          style="background:#185FA5;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
+          ✨ Mejorar calidad
+        </button>` : '<span style="font-size:11px;color:#3B6D11;padding:5px 0">✅ Calidad OK</span>'}
         ${!p.promo_activa ? `<button onclick="abrirModalPromo('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}',${p.precio})"
           style="background:#639922;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
           🏷️ Generar promoción
         </button>` : ''}
         <button onclick="abrirModalStock('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}',${p.stock})"
-          style="background:#185FA5;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
+          style="background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
           📦 Actualizar stock
         </button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
-function filtrarReporte(filtro) {
+async function mejorarPublicacionIndividual(itemId, btn) {
+  btn.textContent = '⏳ Mejorando...';
+  btn.disabled = true;
+  btn.style.opacity = '.6';
+  try {
+    const r = await fetch('/api/mejorar-publicacion-individual', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({item_id: itemId})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      btn.textContent = `✅ Mejorado (${d.score_estimado}% est.)`;
+      btn.style.background = '#3B6D11';
+      setTimeout(() => cargarReportePub(), 3000);
+    } else {
+      btn.textContent = '❌ Error';
+      btn.style.background = '#A32D2D';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+  } catch(e) {
+    btn.textContent = '❌ Error';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+}
   document.querySelectorAll('[id^="fil-"]').forEach(b => {
     b.style.background = ''; b.style.color = '';
   });
@@ -2015,6 +2081,36 @@ def cargar_reporte_github(nombre):
     except Exception as e:
         log(f"⚠️ Error cargando reporte GitHub: {e}")
         return None
+
+@app.route("/api/mejorar-publicacion-individual", methods=["POST"])
+def api_mejorar_publicacion_individual():
+    """Mejora la calidad de una publicación individual."""
+    try:
+        from publicador import PublicadorML
+        item_id = request.json.get("item_id")
+        if not item_id:
+            return jsonify({"ok": False, "error": "item_id requerido"})
+        pub = PublicadorML(sistema.ml, CONFIG.get("ANTHROPIC_API_KEY", ""))
+        perf = sistema.ml.get(f"/item/{item_id}/performance")
+        score = perf.get("score", 100)
+        item_data = sistema.ml.get(f"/items/{item_id}")
+        health_compat = {
+            "overall": {"points": score},
+            "sections": [
+                {
+                    "section_id": b.get("key", ""),
+                    "points": b.get("score", 0),
+                    "total_points": 100,
+                    "tips": [{"tip": v.get("title", "")} for v in b.get("variables", []) if v.get("status") == "PENDING"]
+                }
+                for b in perf.get("buckets", [])
+            ]
+        }
+        resultado = pub.mejorar_calidad_publicacion(item_id, item_data, health_compat)
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
 
 @app.route("/api/reporte-publicaciones")
 def api_reporte_publicaciones():
