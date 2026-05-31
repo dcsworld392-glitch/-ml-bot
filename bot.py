@@ -825,6 +825,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
   <div style="text-align:center;padding-bottom:32px;display:flex;gap:10px;justify-content:center">
     <button class="cycle-btn" onclick="cicloCompleto()">Ejecutar ciclo completo</button>
     <button class="cycle-btn" style="background:#185FA5" onclick="mejorarCalidad()">✨ Mejorar calidad publicaciones</button>
+    <button class="cycle-btn" style="background:#3B6D11" onclick="verHistorial()">📋 Historial de reportes</button>
   </div>
 </main>
 
@@ -1330,6 +1331,7 @@ async function mejorarCalidad(){
       document.getElementById('mejora-barra').style.background = '#3B6D11';
       document.getElementById('mejora-resultado').textContent = `✅ ${d.mejorados} mejoradas a 75%+`;
       document.getElementById('btn-descargar-reporte').style.display = 'block';
+      document.getElementById('btn-ver-historial').style.display = 'block';
       btn.disabled = false;
       btn.textContent = '✨ Mejorar calidad publicaciones';
     }
@@ -1338,6 +1340,32 @@ async function mejorarCalidad(){
 
 function cerrarModalMejora() {
   document.getElementById('modal-mejora').style.display = 'none';
+}
+
+async function verHistorial() {
+  document.getElementById('modal-historial').style.display = 'flex';
+  const r = await fetch('/api/historial-reportes');
+  const lista = await r.json();
+  const el = document.getElementById('historial-lista');
+  if (!lista.length) {
+    el.innerHTML = '<p style="font-size:12px;color:#999">No hay reportes guardados aún.</p>';
+    return;
+  }
+  el.innerHTML = lista.map(rep => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid #f0ede8">
+      <div>
+        <p style="font-size:12px;font-weight:500;color:#1a1a1a">${rep.fecha}</p>
+        <p style="font-size:11px;color:#666">${rep.total} publicaciones revisadas · ${rep.mejorados} mejoradas</p>
+      </div>
+      <a href="/api/reporte-calidad-pdf/${rep.id}" target="_blank"
+         style="background:#1a1a1a;color:#fff;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;text-decoration:none;flex-shrink:0">
+        📄 PDF
+      </a>
+    </div>`).join('');
+}
+
+function cerrarHistorial() {
+  document.getElementById('modal-historial').style.display = 'none';
 }
 
 // Estado del token ML
@@ -1386,6 +1414,17 @@ setInterval(()=>{cargarMetricas();cargarActividad();cargarPendientes();},30000);
 setInterval(verificarToken, 300000);
 </script>
 
+<!-- Modal historial reportes -->
+<div id="modal-historial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:12px;padding:24px;width:520px;max-width:90vw;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <p style="font-size:14px;font-weight:600;color:#1a1a1a">📋 Historial de reportes de calidad</p>
+      <button onclick="cerrarHistorial()" style="background:none;border:none;color:#999;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div id="historial-lista"><p style="font-size:12px;color:#999">Cargando...</p></div>
+  </div>
+</div>
+
 <!-- Panel lateral mejora calidad -->
 <div id="modal-mejora" style="display:none;position:fixed;bottom:24px;right:24px;width:380px;background:white;border-radius:12px;padding:20px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.15);border:0.5px solid #e5e3de">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -1401,6 +1440,7 @@ setInterval(verificarToken, 300000);
   <div style="display:flex;gap:8px;margin-top:12px">
     <button onclick="cerrarModalMejora()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:7px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif">Minimizar</button>
     <a id="btn-descargar-reporte" href="/api/reporte-calidad-pdf" target="_blank" style="flex:1;background:#1a1a1a;color:#fff;padding:7px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:none">📄 Descargar PDF</a>
+    <button onclick="verHistorial()" style="flex:1;background:#185FA5;color:#fff;border:none;padding:7px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;display:none" id="btn-ver-historial">📋 Historial</button>
   </div>
 </div>
 
@@ -1519,8 +1559,10 @@ def api_mis_publicaciones():
 
 
 MEJORA_FILE = "/tmp/ml_mejora_resultados.json"
+HISTORIAL_DIR = "/tmp/ml_reportes"
 
-mejora_progreso = {"corriendo": False, "actual": 0, "total": 0, "producto_actual": "", "mejorados": 0, "resultados": []}
+# Crear directorio de historial si no existe
+os.makedirs(HISTORIAL_DIR, exist_ok=True)
 
 def guardar_mejora_progreso():
     try:
@@ -1538,10 +1580,63 @@ def cargar_mejora_progreso():
     except:
         pass
 
+def guardar_reporte_historial(datos_reporte):
+    """Guarda una copia del reporte en el historial."""
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        archivo = os.path.join(HISTORIAL_DIR, f"reporte_{timestamp}.json")
+        with open(archivo, "w") as f:
+            json.dump({
+                "fecha": datetime.now().isoformat(),
+                "fecha_display": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "total": datos_reporte.get("total", 0),
+                "mejorados": datos_reporte.get("mejorados", 0),
+                "resultados": datos_reporte.get("resultados", []),
+                "archivo": f"reporte_{timestamp}",
+            }, f)
+        return f"reporte_{timestamp}"
+    except:
+        return None
+
+@app.route("/api/historial-reportes")
+def api_historial_reportes():
+    """Lista todos los reportes guardados en el historial."""
+    try:
+        reportes = []
+        if os.path.exists(HISTORIAL_DIR):
+            for archivo in sorted(os.listdir(HISTORIAL_DIR), reverse=True):
+                if archivo.endswith(".json"):
+                    try:
+                        with open(os.path.join(HISTORIAL_DIR, archivo)) as f:
+                            datos = json.load(f)
+                        reportes.append({
+                            "id": datos.get("archivo", archivo.replace(".json", "")),
+                            "fecha": datos.get("fecha_display", ""),
+                            "total": datos.get("total", 0),
+                            "mejorados": datos.get("mejorados", 0),
+                        })
+                    except:
+                        pass
+        return jsonify(reportes)
+    except Exception as e:
+        return jsonify([])
+
+
+@app.route("/api/reporte-calidad-pdf/<reporte_id>")
 @app.route("/api/reporte-calidad-pdf")
-def api_reporte_calidad_pdf():
+def api_reporte_calidad_pdf(reporte_id=None):
     """Genera un reporte PDF de las publicaciones mejoradas."""
     try:
+        # Cargar datos del reporte — del historial o del último
+        if reporte_id:
+            archivo = os.path.join(HISTORIAL_DIR, f"{reporte_id}.json")
+            if os.path.exists(archivo):
+                with open(archivo) as f:
+                    datos = json.load(f)
+            else:
+                return jsonify({"error": "Reporte no encontrado"})
+        else:
+            datos = mejora_progreso
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.colors import HexColor
@@ -1549,9 +1644,7 @@ def api_reporte_calidad_pdf():
         from reportlab.lib.units import cm
         from reportlab.lib import colors
         import io
-        from datetime import datetime
 
-        datos = mejora_progreso
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4,
                                 rightMargin=2*cm, leftMargin=2*cm,
@@ -1743,6 +1836,11 @@ def api_mejorar_calidad():
             mejora_progreso["corriendo"] = False
             mejora_progreso["producto_actual"] = f"✅ Listo — {mejora_progreso['mejorados']} publicaciones mejoradas"
             guardar_mejora_progreso()
+            # Guardar en historial
+            archivo_id = guardar_reporte_historial(mejora_progreso)
+            if archivo_id:
+                mejora_progreso["ultimo_reporte"] = archivo_id
+                guardar_mejora_progreso()
             log(f"✅ Mejora completada: {mejora_progreso['mejorados']}/{len(item_ids)} mejoradas")
         except Exception as e:
             mejora_progreso["corriendo"] = False
