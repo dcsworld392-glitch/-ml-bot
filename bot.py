@@ -1304,10 +1304,9 @@ async function analizarPromociones(){
 async function procesarPreguntas(){document.getElementById('actividad').innerHTML='<p class="loading">Procesando...</p>';await fetch('/api/procesar-preguntas',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},3000);}
 async function cicloCompleto(){await fetch('/api/ciclo',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},5000);}
 async function mejorarCalidad(){
-  const btn = event.target;
-  btn.disabled = true;
+  const btn = document.querySelector('[onclick="mejorarCalidad()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Iniciando...'; }
 
-  // Mostrar panel lateral sin bloquear
   const panel = document.getElementById('modal-mejora');
   panel.style.display = 'block';
   document.getElementById('mejora-barra').style.width = '0%';
@@ -1316,25 +1315,39 @@ async function mejorarCalidad(){
   document.getElementById('mejora-producto').textContent = '';
   document.getElementById('mejora-resultado').textContent = '';
   document.getElementById('btn-descargar-reporte').style.display = 'none';
+  document.getElementById('btn-ver-historial').style.display = 'none';
 
-  await fetch('/api/mejorar-calidad', {method:'POST'});
+  try {
+    const resp = await fetch('/api/mejorar-calidad', {method:'POST'});
+    const d = await resp.json();
+    if (!d.ok) {
+      document.getElementById('mejora-txt').textContent = 'Error: ' + (d.error || 'desconocido');
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Mejorar calidad publicaciones'; }
+      return;
+    }
+  } catch(e) {
+    document.getElementById('mejora-txt').textContent = 'Error de conexión';
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Mejorar calidad publicaciones'; }
+    return;
+  }
 
   const iv = setInterval(async () => {
-    const r = await fetch('/api/progreso-mejora');
-    const d = await r.json();
-    const pct = d.total > 0 ? Math.round(d.actual / d.total * 100) : 0;
-    document.getElementById('mejora-barra').style.width = pct + '%';
-    document.getElementById('mejora-txt').textContent = `${d.actual}/${d.total} revisadas — ${d.mejorados} mejoradas`;
-    document.getElementById('mejora-producto').textContent = d.producto_actual || '';
-    if (!d.corriendo && d.actual >= d.total && d.total > 0) {
-      clearInterval(iv);
-      document.getElementById('mejora-barra').style.background = '#3B6D11';
-      document.getElementById('mejora-resultado').textContent = `✅ ${d.mejorados} mejoradas a 75%+`;
-      document.getElementById('btn-descargar-reporte').style.display = 'block';
-      document.getElementById('btn-ver-historial').style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = '✨ Mejorar calidad publicaciones';
-    }
+    try {
+      const r = await fetch('/api/progreso-mejora');
+      const p = await r.json();
+      const pct = p.total > 0 ? Math.round(p.actual / p.total * 100) : 0;
+      document.getElementById('mejora-barra').style.width = pct + '%';
+      document.getElementById('mejora-txt').textContent = `${p.actual}/${p.total} revisadas — ${p.mejorados} mejoradas`;
+      document.getElementById('mejora-producto').textContent = p.producto_actual || '';
+      if (!p.corriendo && p.actual >= p.total && p.total > 0) {
+        clearInterval(iv);
+        document.getElementById('mejora-barra').style.background = '#3B6D11';
+        document.getElementById('mejora-resultado').textContent = `✅ ${p.mejorados} mejoradas a 75%+`;
+        document.getElementById('btn-descargar-reporte').style.display = 'block';
+        document.getElementById('btn-ver-historial').style.display = 'block';
+        if (btn) { btn.disabled = false; btn.textContent = '✨ Mejorar calidad publicaciones'; }
+      }
+    } catch(e) {}
   }, 2000);
 }
 
