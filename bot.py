@@ -618,6 +618,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
   <div class="hdr-right">
     <span class="pill pill-green">● Bot activo</span>
     <span id="token-estado" class="pill" style="background:#EAF3DE;color:#3B6D11;border:0.5px solid #C0DD97;cursor:pointer" onclick="verEstadoToken()" title="Estado del token ML">🔑 Token OK</span>
+    <a href="#" onclick="toggleReportePub()" class="pill pill-blue">📊 Mis publicaciones</a>
     <a href="#" onclick="togglePublicar()" class="pill pill-blue">📦 Publicar productos</a>
     <span class="pill pill-time" id="last-update">Cargando...</span>
   </div>
@@ -684,7 +685,65 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
     <div id="lista-pendientes"></div>
   </div>
 
-  <!-- PANEL DE PUBLICACIÓN (toggle) -->
+  <!-- REPORTE DE PUBLICACIONES Y STOCK -->
+  <div id="panel-reporte-pub" style="display:none;margin-bottom:28px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="sec-label" style="margin-bottom:0">📊 Reporte de publicaciones activas</div>
+      <button class="mini-btn" onclick="toggleReportePub()">✕ Cerrar</button>
+    </div>
+    <div class="panel">
+      <div id="reporte-pub-loading" style="text-align:center;padding:20px">
+        <p style="font-size:12px;color:#999">Cargando publicaciones...</p>
+      </div>
+      <div id="reporte-pub-contenido" style="display:none">
+        <!-- Alertas de stock -->
+        <div id="alerta-stock-banner" style="display:none;background:#FCEBEB;border:0.5px solid #F5AAAA;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+          <p style="font-size:12px;font-weight:600;color:#A32D2D;margin-bottom:8px">⚠️ Productos con stock bajo (2 o menos unidades)</p>
+          <div id="lista-stock-bajo"></div>
+        </div>
+        <!-- Filtros -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <button onclick="filtrarReporte('todos')" id="fil-todos" class="mini-btn" style="background:#1a1a1a;color:white">Todos</button>
+          <button onclick="filtrarReporte('rojo')" id="fil-rojo" class="mini-btn" style="color:#A32D2D">🔴 Baja calidad</button>
+          <button onclick="filtrarReporte('amarillo')" id="fil-amarillo" class="mini-btn" style="color:#854F0B">🟡 Calidad media</button>
+          <button onclick="filtrarReporte('verde')" id="fil-verde" class="mini-btn" style="color:#3B6D11">🟢 Buena calidad</button>
+          <button onclick="filtrarReporte('sin_promo')" id="fil-sin-promo" class="mini-btn">Sin promoción</button>
+        </div>
+        <div id="tabla-publicaciones"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal promoción -->
+  <div id="modal-promo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:12px;padding:24px;width:480px;max-width:90vw">
+      <p style="font-size:14px;font-weight:600;margin-bottom:4px" id="modal-promo-titulo">Generar promoción</p>
+      <p style="font-size:12px;color:#666;margin-bottom:14px">Precio actual: <strong id="modal-promo-precio"></strong></p>
+      <div id="modal-promo-opciones" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+      <div id="modal-promo-confirmacion" style="display:none;background:#EAF3DE;border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:#3B6D11"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="cerrarModalPromo()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
+        <button id="btn-confirmar-promo" onclick="confirmarPromo()" disabled style="flex:2;background:#3B6D11;color:#fff;border:none;padding:9px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;opacity:.4">Aplicar promoción</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal stock -->
+  <div id="modal-stock" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:12px;padding:24px;width:380px;max-width:90vw">
+      <p style="font-size:14px;font-weight:600;margin-bottom:4px">📦 Actualizar stock</p>
+      <p style="font-size:12px;color:#666;margin-bottom:12px" id="modal-stock-titulo"></p>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <button onclick="cambiarStock(-1)" style="width:36px;height:36px;border-radius:8px;border:0.5px solid #e5e3de;background:#F7F6F3;font-size:18px;cursor:pointer">−</button>
+        <input type="number" id="modal-stock-valor" value="10" min="1" max="999" style="flex:1;text-align:center;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px;font-size:16px;font-weight:600;font-family:'Inter',sans-serif">
+        <button onclick="cambiarStock(1)" style="width:36px;height:36px;border-radius:8px;border:0.5px solid #e5e3de;background:#F7F6F3;font-size:18px;cursor:pointer">+</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="cerrarModalStock()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
+        <button onclick="guardarStock()" style="flex:2;background:#185FA5;color:#fff;border:none;padding:9px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">Guardar stock</button>
+      </div>
+    </div>
+  </div>
   <div id="panel-publicar" style="display:none;margin-bottom:28px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div class="sec-label" style="margin-bottom:0">📦 Publicar productos en ML</div>
@@ -1419,7 +1478,209 @@ function cerrarHistorial() {
   document.getElementById('modal-historial').style.display = 'none';
 }
 
-// Estado del token ML
+// ===== REPORTE DE PUBLICACIONES =====
+let reportePubDatos = [];
+let promoItemActual = null;
+let promoOpcionActual = null;
+let stockItemActual = null;
+
+async function toggleReportePub() {
+  const panel = document.getElementById('panel-reporte-pub');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    panel.scrollIntoView({behavior:'smooth'});
+    await cargarReportePub();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+async function cargarReportePub() {
+  document.getElementById('reporte-pub-loading').style.display = 'block';
+  document.getElementById('reporte-pub-contenido').style.display = 'none';
+  const r = await fetch('/api/reporte-publicaciones');
+  const d = await r.json();
+  if (!d.ok) { document.getElementById('reporte-pub-loading').innerHTML = `<p style="color:#A32D2D">Error: ${d.error}</p>`; return; }
+  reportePubDatos = d.publicaciones;
+  document.getElementById('reporte-pub-loading').style.display = 'none';
+  document.getElementById('reporte-pub-contenido').style.display = 'block';
+
+  // Alertas stock
+  const stockBajos = d.publicaciones.filter(p => p.stock <= 2 && p.stock > 0);
+  if (stockBajos.length > 0) {
+    document.getElementById('alerta-stock-banner').style.display = 'block';
+    document.getElementById('lista-stock-bajo').innerHTML = stockBajos.map(p => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid #F5AAAA">
+        <div>
+          <p style="font-size:12px;font-weight:500">${p.titulo}</p>
+          <p style="font-size:11px;color:#A32D2D">⚠️ Solo quedan <strong>${p.stock} unidades</strong></p>
+        </div>
+        <button onclick="abrirModalStock('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}',${p.stock})"
+          style="background:#185FA5;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;flex-shrink:0">
+          📦 Reponer
+        </button>
+      </div>`).join('');
+  }
+
+  renderTablaPublicaciones(d.publicaciones);
+}
+
+function renderTablaPublicaciones(pubs) {
+  const el = document.getElementById('tabla-publicaciones');
+  if (!pubs.length) { el.innerHTML = '<p style="font-size:12px;color:#999;text-align:center;padding:20px">No hay publicaciones activas.</p>'; return; }
+
+  const coloresCalidad = {verde:'#EAF3DE', amarillo:'#FAEEDA', rojo:'#FCEBEB', gris:'#F7F6F3'};
+  const textosCalidad = {verde:'#3B6D11', amarillo:'#854F0B', rojo:'#A32D2D', gris:'#999'};
+
+  el.innerHTML = pubs.map(p => `
+    <div style="background:white;border:0.5px solid #e5e3de;border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+        <div style="flex:1;min-width:0">
+          <a href="${p.permalink}" target="_blank" style="font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none">${p.titulo}</a>
+          <p style="font-size:11px;color:#666;margin-top:2px">${p.item_id} · ${p.listing_type}</p>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+          <span style="background:${coloresCalidad[p.calidad_color]};color:${textosCalidad[p.calidad_color]};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600">${p.calidad_label}</span>
+          <span style="background:${p.stock<=2?'#FCEBEB':'#F7F6F3'};color:${p.stock<=2?'#A32D2D':'#666'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600">📦 ${p.stock} u.</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;margin-bottom:10px">
+        <span>💰 Precio: <strong>$${p.precio?.toLocaleString('es-AR')}</strong></span>
+        ${p.costo > 0 ? `<span>🏭 Costo: <strong style="color:#185FA5">$${p.costo?.toLocaleString('es-AR')}</strong></span>` : ''}
+        ${p.desglose?.margen_pct ? `<span>📈 Margen: <strong style="color:#3B6D11">${p.desglose.margen_pct}%</strong></span>` : ''}
+        ${p.promo_activa ? `<span style="color:#3B6D11">✅ Con promoción</span>` : `<span style="color:#999">Sin promoción</span>`}
+      </div>
+
+      ${p.desglose && p.costo > 0 ? `
+      <div style="background:#F7F6F3;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#666">
+        <span style="margin-right:12px">Costo Droppers: $${p.desglose.costo_droppers?.toLocaleString('es-AR')} (${p.desglose.costo_droppers_pct}%)</span>
+        <span style="margin-right:12px">Comisión ML: $${p.desglose.comision_ml?.toLocaleString('es-AR')} (${p.desglose.comision_ml_pct}%)</span>
+        <span style="margin-right:12px">IVA+IIBB: $${p.desglose.iva_iibb?.toLocaleString('es-AR')} (${p.desglose.iva_iibb_pct}%)</span>
+        <span style="color:#3B6D11;font-weight:600">Ganancia: $${p.desglose.ganancia_neta?.toLocaleString('es-AR')}</span>
+      </div>` : ''}
+
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${!p.promo_activa ? `<button onclick="abrirModalPromo('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}',${p.precio})"
+          style="background:#639922;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
+          🏷️ Generar promoción
+        </button>` : ''}
+        <button onclick="abrirModalStock('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}',${p.stock})"
+          style="background:#185FA5;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
+          📦 Actualizar stock
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+function filtrarReporte(filtro) {
+  document.querySelectorAll('[id^="fil-"]').forEach(b => {
+    b.style.background = ''; b.style.color = '';
+  });
+  document.getElementById('fil-' + filtro)?.style && (document.getElementById('fil-' + filtro).style.background = '#1a1a1a', document.getElementById('fil-' + filtro).style.color = 'white');
+
+  let filtrados = reportePubDatos;
+  if (filtro === 'rojo') filtrados = reportePubDatos.filter(p => p.calidad_color === 'rojo');
+  else if (filtro === 'amarillo') filtrados = reportePubDatos.filter(p => p.calidad_color === 'amarillo');
+  else if (filtro === 'verde') filtrados = reportePubDatos.filter(p => p.calidad_color === 'verde');
+  else if (filtro === 'sin_promo') filtrados = reportePubDatos.filter(p => !p.promo_activa);
+  renderTablaPublicaciones(filtrados);
+}
+
+// Modal Promoción
+async function abrirModalPromo(itemId, titulo, precio) {
+  promoItemActual = itemId;
+  promoOpcionActual = null;
+  document.getElementById('modal-promo-titulo').textContent = titulo.substring(0, 50);
+  document.getElementById('modal-promo-precio').textContent = '$' + precio.toLocaleString('es-AR');
+  document.getElementById('modal-promo-opciones').innerHTML = '<p style="font-size:12px;color:#999">Cargando opciones...</p>';
+  document.getElementById('modal-promo-confirmacion').style.display = 'none';
+  document.getElementById('btn-confirmar-promo').disabled = true;
+  document.getElementById('btn-confirmar-promo').style.opacity = '.4';
+  document.getElementById('modal-promo').style.display = 'flex';
+
+  const r = await fetch(`/api/opciones-promocion/${itemId}`);
+  const d = await r.json();
+  if (!d.ok) { document.getElementById('modal-promo-opciones').innerHTML = `<p style="color:#A32D2D">${d.error}</p>`; return; }
+
+  document.getElementById('modal-promo-opciones').innerHTML = d.opciones.map((op, i) => `
+    <div onclick="seleccionarPromo(${i}, ${JSON.stringify(op).replace(/"/g,"'")})"
+      id="promo-op-${i}"
+      style="border:0.5px solid #e5e3de;border-radius:8px;padding:12px;cursor:pointer;transition:.2s">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <p style="font-size:12px;font-weight:600;color:#1a1a1a">${op.label}</p>
+        <p style="font-size:13px;font-weight:700;color:#3B6D11">$${op.precio_nuevo.toLocaleString('es-AR')}</p>
+      </div>
+      <p style="font-size:11px;color:#666;margin-top:3px">${op.descripcion}</p>
+    </div>`).join('');
+}
+
+function seleccionarPromo(idx, opcion) {
+  promoOpcionActual = opcion;
+  document.querySelectorAll('[id^="promo-op-"]').forEach(el => {
+    el.style.background = ''; el.style.borderColor = '#e5e3de';
+  });
+  const sel = document.getElementById(`promo-op-${idx}`);
+  sel.style.background = '#EAF3DE'; sel.style.borderColor = '#639922';
+  document.getElementById('modal-promo-confirmacion').style.display = 'block';
+  document.getElementById('modal-promo-confirmacion').textContent = `✅ Se cambiará el precio a $${opcion.precio_nuevo.toLocaleString('es-AR')} — ${opcion.label}`;
+  document.getElementById('btn-confirmar-promo').disabled = false;
+  document.getElementById('btn-confirmar-promo').style.opacity = '1';
+}
+
+async function confirmarPromo() {
+  if (!promoItemActual || !promoOpcionActual) return;
+  const btn = document.getElementById('btn-confirmar-promo');
+  btn.textContent = 'Aplicando...'; btn.disabled = true;
+  const r = await fetch('/api/aplicar-promocion-item', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({item_id: promoItemActual, precio_nuevo: promoOpcionActual.precio_nuevo})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    cerrarModalPromo();
+    await cargarReportePub();
+  } else {
+    document.getElementById('modal-promo-confirmacion').textContent = `❌ Error: ${d.error}`;
+    document.getElementById('modal-promo-confirmacion').style.color = '#A32D2D';
+    btn.textContent = 'Aplicar promoción'; btn.disabled = false;
+  }
+}
+
+function cerrarModalPromo() { document.getElementById('modal-promo').style.display = 'none'; }
+
+// Modal Stock
+function abrirModalStock(itemId, titulo, stockActual) {
+  stockItemActual = itemId;
+  document.getElementById('modal-stock-titulo').textContent = titulo.substring(0, 60);
+  document.getElementById('modal-stock-valor').value = stockActual;
+  document.getElementById('modal-stock').style.display = 'flex';
+}
+
+function cambiarStock(delta) {
+  const input = document.getElementById('modal-stock-valor');
+  input.value = Math.max(1, parseInt(input.value || 0) + delta);
+}
+
+async function guardarStock() {
+  if (!stockItemActual) return;
+  const stock = parseInt(document.getElementById('modal-stock-valor').value);
+  const r = await fetch(`/api/actualizar-stock/${stockItemActual}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({stock})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    cerrarModalStock();
+    await cargarReportePub();
+  } else {
+    alert('Error: ' + d.error);
+  }
+}
+
+function cerrarModalStock() { document.getElementById('modal-stock').style.display = 'none'; }
 async function verificarToken() {
   try {
     const r = await fetch('/api/estado-token');
@@ -1754,6 +2015,226 @@ def cargar_reporte_github(nombre):
     except Exception as e:
         log(f"⚠️ Error cargando reporte GitHub: {e}")
         return None
+
+@app.route("/api/reporte-publicaciones")
+def api_reporte_publicaciones():
+    """Reporte completo de publicaciones activas con costos, calidad y stock."""
+    try:
+        user_id = CONFIG.get("ML_USER_ID", "211711561")
+        items_data = sistema.ml.get(f"/users/{user_id}/items/search",
+                                    params={"status": "active", "limit": 50})
+        item_ids = items_data.get("results", [])
+
+        # Cargar productos de Droppers para cruzar costos
+        productos_droppers = scraper_estado.get("productos", [])
+        costos_map = {}
+        for p in productos_droppers:
+            titulo = p.get("titulo", "").lower()
+            costo = p.get("costo", 0)
+            if costo > 0 and titulo:
+                costos_map[titulo[:30]] = costo
+
+        from costos import CalculadoraCostos
+        calc = CalculadoraCostos()
+
+        reporte = []
+        alertas_stock = []
+
+        for item_id in item_ids:
+            try:
+                item = sistema.ml.get(f"/items/{item_id}")
+                titulo = item.get("title", "")
+                precio = item.get("price", 0)
+                stock = item.get("available_quantity", 0)
+                cat_id = item.get("category_id", "")
+                listing_type = item.get("listing_type_id", "")
+
+                # Color de calidad
+                try:
+                    perf = sistema.ml.get(f"/item/{item_id}/performance")
+                    score = perf.get("score", 0)
+                    level = perf.get("level", "")
+                    if score >= 75:
+                        calidad_color = "verde"
+                        calidad_label = f"{score}% — Buena"
+                    elif score >= 50:
+                        calidad_color = "amarillo"
+                        calidad_label = f"{score}% — Regular"
+                    else:
+                        calidad_color = "rojo"
+                        calidad_label = f"{score}% — Baja"
+                except:
+                    calidad_color = "gris"
+                    calidad_label = "Sin datos"
+                    score = 0
+
+                # Costo Droppers (cruzar por título)
+                costo = 0
+                titulo_lower = titulo.lower()[:30]
+                for key, val in costos_map.items():
+                    if key[:20] in titulo_lower or titulo_lower[:20] in key:
+                        costo = val
+                        break
+
+                # Desglose de costos
+                desglose = {}
+                if costo > 0 and precio > 0:
+                    calculo = calc.calcular(precio, costo, "default", False)
+                    desglose = {
+                        "costo_droppers": costo,
+                        "costo_droppers_pct": round(costo / precio * 100, 1),
+                        "comision_ml": calculo["comision_ml"],
+                        "comision_ml_pct": calculo["tasa_comision_pct"],
+                        "iva_iibb": round(calculo["iva_comision"] + calculo["iibb"], 2),
+                        "iva_iibb_pct": round((calculo["iva_comision"] + calculo["iibb"]) / precio * 100, 1),
+                        "ganancia_neta": calculo["ganancia_neta"],
+                        "margen_pct": calculo["margen_neto_pct"],
+                    }
+
+                # Promociones activas
+                promo_activa = False
+                promo_detalle = ""
+                try:
+                    promos = sistema.ml.get(f"/items/{item_id}/promotions")
+                    if promos and isinstance(promos, list) and len(promos) > 0:
+                        promo_activa = True
+                        promo_detalle = promos[0].get("type", "Promoción activa")
+                except:
+                    pass
+
+                pub = {
+                    "item_id": item_id,
+                    "titulo": titulo,
+                    "precio": precio,
+                    "stock": stock,
+                    "listing_type": listing_type,
+                    "categoria_id": cat_id,
+                    "calidad_score": score,
+                    "calidad_color": calidad_color,
+                    "calidad_label": calidad_label,
+                    "costo": costo,
+                    "desglose": desglose,
+                    "promo_activa": promo_activa,
+                    "promo_detalle": promo_detalle,
+                    "permalink": item.get("permalink", ""),
+                }
+                reporte.append(pub)
+
+                # Alerta de stock bajo
+                if 0 < stock <= 2:
+                    alertas_stock.append({
+                        "item_id": item_id,
+                        "titulo": titulo,
+                        "stock": stock,
+                    })
+
+            except Exception as e:
+                log(f"Error en {item_id}: {e}")
+
+        return jsonify({
+            "ok": True,
+            "publicaciones": reporte,
+            "alertas_stock": alertas_stock,
+            "total": len(reporte),
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/api/actualizar-stock/<item_id>", methods=["POST"])
+def api_actualizar_stock(item_id):
+    """Actualiza el stock de una publicación."""
+    try:
+        datos = request.json
+        nuevo_stock = int(datos.get("stock", 10))
+        resultado = sistema.ml.put(f"/items/{item_id}", {"available_quantity": nuevo_stock})
+        if resultado.get("id"):
+            return jsonify({"ok": True, "stock": nuevo_stock})
+        return jsonify({"ok": False, "error": resultado.get("message", "Error")})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/api/opciones-promocion/<item_id>")
+def api_opciones_promocion(item_id):
+    """Devuelve las opciones de promoción disponibles para un item."""
+    try:
+        item = sistema.ml.get(f"/items/{item_id}")
+        precio = item.get("price", 0)
+        opciones = [
+            {
+                "tipo": "descuento_5",
+                "label": "Descuento 5%",
+                "precio_nuevo": round(precio * 0.95, 2),
+                "descripcion": "Pequeño descuento para aumentar clics",
+            },
+            {
+                "tipo": "descuento_10",
+                "label": "Descuento 10%",
+                "precio_nuevo": round(precio * 0.90, 2),
+                "descripcion": "Descuento moderado, buen balance ventas/margen",
+            },
+            {
+                "tipo": "descuento_15",
+                "label": "Descuento 15%",
+                "precio_nuevo": round(precio * 0.85, 2),
+                "descripcion": "Descuento agresivo para liquidar stock rápido",
+            },
+            {
+                "tipo": "precio_llamativo",
+                "label": "Precio llamativo",
+                "precio_nuevo": round(precio * 0.97, 2),
+                "descripcion": "3% de descuento para aparecer como oferta en ML",
+            },
+        ]
+        return jsonify({"ok": True, "item_id": item_id, "precio_actual": precio, "opciones": opciones})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/api/aplicar-promocion-item", methods=["POST"])
+def api_aplicar_promocion_item():
+    """Aplica una promoción (descuento de precio) a un item."""
+    try:
+        datos = request.json
+        item_id = datos.get("item_id")
+        precio_nuevo = float(datos.get("precio_nuevo", 0))
+        if not item_id or precio_nuevo <= 0:
+            return jsonify({"ok": False, "error": "Datos inválidos"})
+        resultado = sistema.ml.put(f"/items/{item_id}", {"price": precio_nuevo})
+        if resultado.get("id"):
+            return jsonify({"ok": True, "precio_nuevo": precio_nuevo})
+        return jsonify({"ok": False, "error": resultado.get("message", "Error")})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/api/alertas-stock")
+def api_alertas_stock():
+    """Retorna publicaciones con stock bajo (2 o menos unidades)."""
+    try:
+        user_id = CONFIG.get("ML_USER_ID", "211711561")
+        items_data = sistema.ml.get(f"/users/{user_id}/items/search",
+                                    params={"status": "active", "limit": 50})
+        item_ids = items_data.get("results", [])
+        alertas = []
+        for item_id in item_ids:
+            try:
+                item = sistema.ml.get(f"/items/{item_id}")
+                stock = item.get("available_quantity", 0)
+                if 0 < stock <= 2:
+                    alertas.append({
+                        "item_id": item_id,
+                        "titulo": item.get("title", ""),
+                        "stock": stock,
+                        "precio": item.get("price", 0),
+                    })
+            except:
+                pass
+        return jsonify({"ok": True, "alertas": alertas})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
 
 @app.route("/api/historial-reportes")
 def api_historial_reportes():

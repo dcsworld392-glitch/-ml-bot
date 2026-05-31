@@ -620,118 +620,141 @@ Devolvé SOLO JSON:
 
     def mejorar_calidad_publicacion(self, item_id, item_data, health_data):
         """
-        Mejora una publicación hasta llegar al 80% de calidad.
-        Analiza cada sección y aplica las correcciones específicas.
+        Motor inteligente de mejora de calidad.
+        Analiza cada bucket del performance, consulta atributos requeridos de ML
+        y usa Claude para generar mejoras específicas por producto.
         """
         try:
             score = health_data.get("overall", {}).get("points", 0)
             if score >= 75:
                 return {"ok": True, "item_id": item_id, "score": score, "accion": "ya_ok"}
 
-            # Analizar qué secciones fallan
-            secciones = {s["section_id"]: s for s in health_data.get("sections", [])}
-            mejoras = {}
-
-            # 1. TÍTULO — mejorar si tiene menos de 12/15 puntos
-            titulo_pts = secciones.get("TITLE", {}).get("points", 0)
-            titulo_total = secciones.get("TITLE", {}).get("total_points", 15)
             titulo_actual = item_data.get("title", "")
             categoria_id = item_data.get("category_id", "")
 
-            # 2. DESCRIPCIÓN — mejorar si está vacía o tiene puntaje bajo
-            desc_pts = secciones.get("DESCRIPTION", {}).get("points", 0)
-            if desc_pts < 15:
+            # 1. Obtener atributos requeridos por la categoría de ML
+            atributos_requeridos = []
+            try:
+                r = self.ml.get(f"/categories/{categoria_id}/attributes")
+                atributos_requeridos = [
+                    {"id": a["id"], "name": a.get("name", ""), "required": a.get("tags", {}).get("required", False)}
+                    for a in r if a.get("tags", {}).get("required", False) or a.get("tags", {}).get("catalog_required", False)
+                ]
+            except:
+                pass
+
+            # 2. Obtener descripción actual
+            desc_actual = ""
+            try:
+                desc_data = self.ml.get(f"/items/{item_id}/description")
+                desc_actual = desc_data.get("plain_text", "") or desc_data.get("text", "")
+            except:
+                pass
+
+            # 3. Analizar buckets del performance para saber qué falta
+            buckets = health_data.get("sections", [])
+            problemas = []
+            for b in buckets:
+                pts = b.get("points", 0)
+                total = b.get("total_points", 100)
+                if pts < total * 0.7:
+                    tips = [v.get("title", "") for v in b.get("tips", []) if v.get("status") == "PENDING"]
+                    problemas.append({
+                        "seccion": b.get("section_id", ""),
+                        "score": f"{pts}/{total}",
+                        "tips": tips[:3]
+                    })
+
+            mejoras = {}
+            if any(b.get("section_id") == "DESCRIPTION" and b.get("points", 0) < 15 for b in buckets):
                 mejoras["necesita_descripcion"] = True
-
-            # 3. CARACTERÍSTICAS — ver cuántas hay
-            attrs_pts = secciones.get("MAIN_FEATURES", {}).get("points", 0)
-            attrs_total = secciones.get("MAIN_FEATURES", {}).get("total_points", 20)
-            if attrs_pts < attrs_total * 0.6:
+            if any(b.get("section_id") == "MAIN_FEATURES" and b.get("points", 0) < b.get("total_points", 20) * 0.6 for b in buckets):
                 mejoras["necesita_atributos"] = True
-
-            # 4. FOTOS — verificar cantidad
-            fotos_pts = secciones.get("PICTURES", {}).get("points", 0)
-            if fotos_pts < 20:
+            if any(b.get("section_id") == "PICTURES" and b.get("points", 0) < 20 for b in buckets):
                 mejoras["necesita_fotos"] = True
 
-            # Generar mejoras con IA
-            tips_todos = []
-            for s in health_data.get("sections", []):
-                for tip in s.get("tips", []):
-                    tips_todos.append(tip.get("tip", ""))
+            # 4. Construir prompt muy específico para Claude
+            attrs_requeridos_txt = "\n".join([f"- {a['id']}: {a['name']}" for a in atributos_requeridos[:15]]) or "No se pudieron obtener"
+            problemas_txt = "\n".join([f"- {p['seccion']} ({p['score']}): {', '.join(p['tips'])}" for p in problemas]) or "Sin datos"
+            attrs_actuales = item_data.get("attributes", [])
+            attrs_actuales_txt = "\n".join([f"- {a.get('id')}: {a.get('value_name','')}" for a in attrs_actuales[:10]])
 
-            prompt = f"""Sos experto en Mercado Libre Argentina. Esta publicación tiene {score}% de calidad y necesita llegar al 80%.
+            prompt = f"""Sos un experto certificado en el algoritmo de calidad de Mercado Libre Argentina.
+Analizá esta publicación y generá mejoras precisas para llevarla del {score}% al 80%+.
 
-PUBLICACIÓN ACTUAL:
-- Título: {titulo_actual}
-- Categoría: {categoria_id}
-- Score: {score}/100
+PUBLICACIÓN:
+- ID: {item_id}
+- Título actual: {titulo_actual}
+- Categoría ML: {categoria_id}
+- Score actual: {score}/100
 
-SECCIONES CON PUNTAJE BAJO:
-{chr(10).join(f"- {s['section_id']}: {s.get('points',0)}/{s.get('total_points',0)} pts" for s in health_data.get('sections', []) if s.get('points',0) < s.get('total_points',0)*0.7)}
+DESCRIPCIÓN ACTUAL:
+{desc_actual[:300] if desc_actual else "SIN DESCRIPCIÓN — crítico, resta muchos puntos"}
 
-TIPS DE ML:
-{chr(10).join(f"- {t}" for t in tips_todos[:8])}
+ATRIBUTOS ACTUALES:
+{attrs_actuales_txt if attrs_actuales_txt else "Ninguno"}
 
-ESTADO DE MEJORAS NECESARIAS:
-{chr(10).join(f"- {k}" for k in mejoras.keys())}
+ATRIBUTOS REQUERIDOS POR ML PARA ESTA CATEGORÍA:
+{attrs_requeridos_txt}
 
-Generá las mejoras específicas. Devolvé SOLO JSON:
+PROBLEMAS DETECTADOS POR ML:
+{problemas_txt}
+
+INSTRUCCIONES:
+1. TÍTULO: 55-60 chars exactos, keyword principal al inicio, sin puntuación
+2. DESCRIPCIÓN: 200+ palabras. Incluir: características técnicas, materiales, dimensiones estimadas, uso, garantía 10 días, entrega 72hs hábiles
+3. ATRIBUTOS: completar TODOS los requeridos con valores reales y específicos según el producto. No usar "No especificado" — inferir del título
+4. Si el título menciona dimensiones, colores o materiales, usarlos en los atributos
+
+Devolvé SOLO JSON válido:
 {{
-  "titulo_nuevo": "título mejorado de 55-60 caracteres con keyword al inicio",
-  "descripcion_nueva": "descripción de 200+ palabras con características técnicas, garantía 10 días, entrega 72hs hábiles",
+  "titulo_nuevo": "título optimizado 55-60 chars",
+  "descripcion_nueva": "descripción 200+ palabras completa",
   "atributos_nuevos": [
-    {{"id": "BRAND", "value_name": "Genérico"}},
-    {{"id": "COLOR", "value_name": "Negro"}},
-    {{"id": "MATERIAL", "value_name": "Plástico ABS"}},
-    {{"id": "WITH_WARRANTY", "value_name": "Sí"}},
-    {{"id": "SELLER_SKU", "value_name": "SKU-001"}}
+    {{"id": "BRAND", "value_name": "Generico"}},
+    {{"id": "COLOR", "value_name": "inferir del titulo"}},
+    {{"id": "MATERIAL", "value_name": "inferir del titulo"}},
+    {{"id": "WITH_WARRANTY", "value_name": "Si"}},
+    {{"id": "SELLER_SKU", "value_name": "SKU-AUTO"}}
   ],
-  "score_estimado": 80
+  "razon": "una línea explicando las mejoras principales",
+  "score_estimado": 82
 }}"""
 
             import anthropic as _ant
             client = _ant.Anthropic(api_key=self.generador.client.api_key)
             msg = client.messages.create(
                 model="claude-sonnet-4-5",
-                max_tokens=1500,
+                max_tokens=2000,
                 messages=[{"role": "user", "content": prompt}]
             )
             texto = msg.content[0].text.strip()
             mejora = json.loads(texto[texto.find("{"):texto.rfind("}")+1])
 
-            # Aplicar mejoras a la publicación
+            # 5. Aplicar mejoras
             updates = {}
-
-            # Actualizar título si mejoró
             titulo_nuevo = mejora.get("titulo_nuevo", "")
             if titulo_nuevo and titulo_nuevo != titulo_actual:
                 updates["title"] = titulo_nuevo[:60]
 
-            # Actualizar atributos
             atributos_nuevos = mejora.get("atributos_nuevos", [])
             if atributos_nuevos:
-                # Combinar con atributos existentes
-                attrs_existentes = {a.get("id"): a for a in item_data.get("attributes", [])}
+                attrs_existentes = {a.get("id"): a for a in attrs_actuales}
                 for a in atributos_nuevos:
-                    attrs_existentes[a["id"]] = a
+                    if a.get("value_name") and a.get("value_name") not in ["No especificado", "inferir del titulo"]:
+                        attrs_existentes[a["id"]] = a
                 updates["attributes"] = list(attrs_existentes.values())
 
-            # Aplicar updates al item
             if updates:
                 self.ml.put(f"/items/{item_id}", updates)
 
-            # Actualizar descripción por endpoint separado
+            # 6. Actualizar descripción
             desc_nueva = mejora.get("descripcion_nueva", "")
             if desc_nueva and mejoras.get("necesita_descripcion"):
                 try:
-                    # Verificar si ya tiene descripción
-                    desc_actual = self.ml.get(f"/items/{item_id}/description")
-                    if desc_actual.get("text") or desc_actual.get("plain_text"):
-                        # Ya tiene descripción — actualizar con PUT
+                    if desc_actual:
                         self.ml.put(f"/items/{item_id}/description", {"plain_text": desc_nueva})
                     else:
-                        # No tiene descripción — crear con POST
                         self.ml.post(f"/items/{item_id}/description", {"plain_text": desc_nueva})
                 except:
                     try:
@@ -743,9 +766,10 @@ Generá las mejoras específicas. Devolvé SOLO JSON:
                 "ok": True,
                 "item_id": item_id,
                 "score_anterior": score,
-                "score_estimado": mejora.get("score_estimado", 80),
+                "score_estimado": mejora.get("score_estimado", 82),
                 "titulo_nuevo": titulo_nuevo,
                 "mejoras_aplicadas": list(mejoras.keys()),
+                "razon": mejora.get("razon", ""),
             }
 
         except Exception as e:
