@@ -225,7 +225,7 @@ class PublicadorML:
         return None
 
     def calcular_precio_inteligente(self, costo, margen_min, margen_max, categoria_nombre,
-                                    envio_gratis, precio_competencia, estrategia):
+                                    envio_gratis, precio_competencia, estrategia, cuotas=1):
         """Calcula el precio óptimo según estrategia y rango de margen."""
         precio_con_margen_min = self.calculadora.calcular_precio_para_margen(
             costo, margen_min, categoria_nombre, envio_gratis, cuotas=cuotas
