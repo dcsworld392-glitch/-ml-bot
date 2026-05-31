@@ -1,48 +1,45 @@
 """
 =============================================================
   MÓDULO: PUBLICADOR INTELIGENTE CON IA
-  Publica productos de Droppers en ML con títulos y precios
-  optimizados para el algoritmo de Mercado Libre
+  Publica productos de Droppers en ML con títulos, precios
+  y fichas técnicas optimizadas para Mercado Libre Argentina
 =============================================================
 """
 
 import os
 import json
 import re
-import requests
 import anthropic
 from costos import CalculadoraCostos, COMISIONES_ML
 
 # =============================================================
-#  CONFIGURACIÓN DE PUBLICACIÓN
+#  CATEGORÍAS ML
 # =============================================================
 
-# Comisiones ML por categoría para el cálculo de precios
 CATEGORIAS_ML = {
-    "Celulares y Smartphones":         "MLA1051",
-    "Computación":                     "MLA1652",
-    "Electrónica":                     "MLA1004",
-    "Audio":                           "MLA1003",
-    "Televisores":                     "MLA1002",
-    "Cámaras y Accesorios":            "MLA1039",
-    "Videojuegos":                     "MLA1144",
-    "Electrodomésticos":               "MLA1574",
-    "Herramientas":                    "MLA1511",
-    "Hogar y Muebles":                 "MLA9201",
-    "Ropa y Accesorios":               "MLA1430",
-    "Deportes":                        "MLA1276",
-    "Juguetes":                        "MLA5726",
-    "Bebés":                           "MLA5726",
-    "Salud y Belleza":                 "MLA1246",
-    "Mascotas":                        "MLA1612",
-    "Libros":                          "MLA3025",
-    "Industrias y Oficinas":           "MLA1953",
-    "Construcción":                    "MLA1459",
-    "Accesorios para Autos":           "MLA1747",
-    "Alimentos":                       "MLA1403",
+    "Celulares y Smartphones":   "MLA1051",
+    "Computación":               "MLA1652",
+    "Electrónica":               "MLA1004",
+    "Audio":                     "MLA1003",
+    "Televisores":               "MLA1002",
+    "Cámaras y Accesorios":      "MLA1039",
+    "Videojuegos":               "MLA1144",
+    "Electrodomésticos":         "MLA1574",
+    "Herramientas":              "MLA1511",
+    "Hogar y Muebles":           "MLA9201",
+    "Ropa y Accesorios":         "MLA1430",
+    "Deportes":                  "MLA1276",
+    "Juguetes":                  "MLA5726",
+    "Bebés":                     "MLA5726",
+    "Salud y Belleza":           "MLA1246",
+    "Mascotas":                  "MLA1612",
+    "Libros":                    "MLA3025",
+    "Industrias y Oficinas":     "MLA1953",
+    "Construcción":              "MLA1459",
+    "Accesorios para Autos":     "MLA1747",
+    "Alimentos":                 "MLA1403",
 }
 
-# Palabras clave de alto impacto en ML por categoría
 KEYWORDS_CATEGORIAS = {
     "Celulares y Smartphones":  ["original", "sellado", "garantía", "libre", "desbloqueado"],
     "Computación":              ["original", "nuevo", "garantía", "factura", "envío gratis"],
@@ -55,6 +52,9 @@ KEYWORDS_CATEGORIAS = {
 
 calculadora = CalculadoraCostos()
 
+GARANTIA_DIAS = 10
+ENTREGA_DIAS  = 3   # días hábiles que tarda Droppers
+
 
 # =============================================================
 #  GENERADOR DE LISTINGS CON IA
@@ -64,39 +64,44 @@ class GeneradorListings:
     def __init__(self, api_key):
         self.client = anthropic.Anthropic(api_key=api_key)
 
-    def optimizar_para_ml(self, producto_droppers, categoria_ml, margen_pct,
-                           envio_gratis=False, precio_competencia=None):
-        """
-        Genera un listing 100% optimizado para el algoritmo de ML.
-        Retorna título, descripción y atributos listos para publicar.
-        """
+    def optimizar_para_ml(self, producto, categoria_ml, margen_pct,
+                          envio_gratis=False, precio_competencia=None,
+                          atributos_requeridos=None):
         keywords = KEYWORDS_CATEGORIAS.get(categoria_ml, KEYWORDS_CATEGORIAS["default"])
+        attrs_str = ", ".join(atributos_requeridos) if atributos_requeridos else "BRAND"
 
-        prompt = f"""Sos un experto en SEO y ventas de Mercado Libre Argentina con 10 años de experiencia.
-Tu objetivo es crear publicaciones que aparezcan en los primeros resultados de búsqueda.
+        prompt = f"""Sos un experto en SEO y ventas de Mercado Libre Argentina.
+Tu objetivo es crear publicaciones que aparezcan en los primeros resultados.
 
-PRODUCTO A PUBLICAR:
-{json.dumps(producto_droppers, ensure_ascii=False, indent=2)}
+PRODUCTO:
+- Título original: {producto.get('titulo', '')}
+- Descripción: {producto.get('descripcion', 'Sin descripción')}
+- Categoría ML: {categoria_ml}
+- Envío gratis: {"Sí" if envio_gratis else "No — entrega acordada con vendedor"}
+- Keywords de la categoría: {', '.join(keywords)}
+{f"- Precio promedio competencia: ${precio_competencia:,.0f}" if precio_competencia else ""}
 
-CATEGORÍA: {categoria_ml}
-ENVÍO GRATIS: {"Sí" if envio_gratis else "No"}
-KEYWORDS MÁS BUSCADAS EN ESTA CATEGORÍA: {', '.join(keywords)}
-{f"PRECIO PROMEDIO DE COMPETENCIA: ${precio_competencia:,.0f}" if precio_competencia else ""}
+CONDICIONES DE VENTA (INCLUIR SIEMPRE):
+- Garantía: {GARANTIA_DIAS} días
+- Entrega: dentro de las 72 horas hábiles (3 días hábiles)
+- Estado: nuevo
 
-REGLAS DEL ALGORITMO DE ML (CRÍTICO - seguir al pie de la letra):
-1. TÍTULO: exactamente 60 caracteres o menos. Incluir marca + modelo + característica clave + 1 keyword. NO usar signos de puntuación innecesarios. NO usar "///" ni caracteres especiales.
-2. El título es el factor #1 de posicionamiento. Debe sonar natural como búsqueda real.
-3. La descripción debe tener mínimo 150 palabras con keywords distribuidas naturalmente.
-4. Los atributos técnicos completos mejoran el ranking hasta un 40%.
-5. {"Incluir 'Envío gratis' en el título mejora CTR un 35%" if envio_gratis else ""}
+ATRIBUTOS REQUERIDOS POR ML: {attrs_str}
 
-Devolvé SOLO un JSON válido con este formato exacto (sin texto adicional, sin ```json):
+REGLAS:
+1. TÍTULO: máximo 60 caracteres, sin puntuación innecesaria, sin caracteres especiales
+2. DESCRIPCIÓN: 150-250 palabras. Incluir beneficios, garantía de {GARANTIA_DIAS} días y plazo de entrega de 72 horas hábiles
+3. Completar TODOS los atributos requeridos con valores genéricos si no se conocen
+
+Devolvé SOLO JSON (sin texto adicional ni ```json):
 {{
-  "titulo": "título de exactamente hasta 60 caracteres",
-  "descripcion": "descripción de 150-250 palabras con keywords naturales, beneficios del producto, por qué comprarlo, garantía si aplica",
-  "puntos_clave": ["beneficio 1", "beneficio 2", "beneficio 3", "beneficio 4", "beneficio 5"],
-  "terminos_busqueda": ["término 1", "término 2", "término 3", "término 4", "término 5"],
-  "score_estimado": 85
+  "titulo": "título de hasta 60 caracteres",
+  "descripcion": "descripción completa con garantía y plazo de entrega",
+  "atributos": [
+    {{"id": "BRAND", "value_name": "Genérico"}},
+    {{"id": "SELLER_SKU", "value_name": "SKU-001"}}
+  ],
+  "score_estimado": 80
 }}"""
 
         msg = self.client.messages.create(
@@ -109,31 +114,21 @@ Devolvé SOLO un JSON válido con este formato exacto (sin texto adicional, sin 
         fin = texto.rfind("}") + 1
         return json.loads(texto[inicio:fin])
 
-    def reescribir_si_baja_efectividad(self, item_id, titulo_actual, descripcion_actual,
-                                        efectividad_pct, categoria):
-        """Reescribe una publicación si la efectividad baja del 66%."""
-        prompt = f"""Una publicación de Mercado Libre tiene efectividad de {efectividad_pct}% (necesita >66%).
-
-TÍTULO ACTUAL: {titulo_actual}
-DESCRIPCIÓN ACTUAL: {descripcion_actual[:300]}
+    def reescribir_si_baja_efectividad(self, item_id, titulo_actual,
+                                        descripcion_actual, efectividad_pct, categoria):
+        prompt = f"""Publicación ML con efectividad {efectividad_pct}% (necesita >66%).
+TÍTULO: {titulo_actual}
+DESCRIPCIÓN: {descripcion_actual[:300]}
 CATEGORÍA: {categoria}
-
-Identificá los problemas y generá versiones mejoradas. Devolvé SOLO JSON:
-{{
-  "problemas": ["problema 1", "problema 2"],
-  "titulo_nuevo": "título mejorado hasta 60 caracteres",
-  "descripcion_nueva": "descripción mejorada de 150-200 palabras"
-}}"""
-
+Devolvé SOLO JSON:
+{{"problemas":[],"titulo_nuevo":"","descripcion_nueva":""}}"""
         msg = self.client.messages.create(
             model="claude-sonnet-4-5",
             max_tokens=800,
             messages=[{"role": "user", "content": prompt}]
         )
         texto = msg.content[0].text.strip()
-        inicio = texto.find("{")
-        fin = texto.rfind("}") + 1
-        return json.loads(texto[inicio:fin])
+        return json.loads(texto[texto.find("{"):texto.rfind("}")+1])
 
 
 # =============================================================
@@ -142,146 +137,151 @@ Identificá los problemas y generá versiones mejoradas. Devolvé SOLO JSON:
 
 class PublicadorML:
     def __init__(self, ml_client, anthropic_key):
-        self.ml = ml_client
-        self.generador = GeneradorListings(anthropic_key)
+        self.ml         = ml_client
+        self.generador  = GeneradorListings(anthropic_key)
         self.calculadora = CalculadoraCostos()
 
+    def obtener_categoria_correcta(self, titulo):
+        """Usa la API de ML para obtener la categoría hoja correcta."""
+        try:
+            sugerencia = self.ml.get("/sites/MLA/domain_discovery/search", params={
+                "q": titulo[:50], "limit": 1
+            })
+            if sugerencia and len(sugerencia) > 0:
+                return sugerencia[0].get("category_id", "")
+        except:
+            pass
+        return ""
+
+    def obtener_atributos_requeridos(self, categoria_id):
+        """Obtiene los atributos obligatorios de una categoría."""
+        try:
+            attrs = self.ml.get(f"/categories/{categoria_id}/attributes")
+            requeridos = []
+            for a in attrs:
+                tags = a.get("tags", {})
+                if tags.get("required") or tags.get("catalog_required"):
+                    requeridos.append(a.get("id", ""))
+            return requeridos
+        except:
+            return ["BRAND"]
+
     def buscar_precio_competencia(self, titulo, categoria_id):
-        """Busca el precio promedio de los competidores mejor posicionados."""
+        """Busca el precio mediano de los competidores."""
         try:
             r = self.ml.get("/sites/MLA/search", params={
-                "q": titulo[:40],
-                "category": categoria_id,
-                "limit": 10,
-                "sort": "relevance",
+                "q": titulo[:40], "category": categoria_id,
+                "limit": 10, "sort": "relevance",
             })
-            precios = [item["price"] for item in r.get("results", []) if item.get("price")]
+            precios = [i["price"] for i in r.get("results", []) if i.get("price")]
             if precios:
-                # Excluir outliers y tomar la mediana
                 precios_sorted = sorted(precios)
-                n = len(precios_sorted)
-                return precios_sorted[n // 2]
+                return precios_sorted[len(precios_sorted) // 2]
         except:
             pass
         return None
 
-    def calcular_precio_publicacion(self, costo_droppers, margen_pct, categoria_nombre,
-                                     envio_gratis, precio_competencia=None):
-        """
-        Calcula el precio óptimo de publicación considerando:
-        - Margen deseado
-        - Precio de competencia
-        - Si ofrece envío gratis
-        """
-        # Precio mínimo para mantener el margen
+    def calcular_precio_publicacion(self, costo, margen_pct, categoria_nombre,
+                                    envio_gratis, precio_competencia=None):
         precio_minimo = self.calculadora.calcular_precio_para_margen(
-            costo_droppers, margen_pct, categoria_nombre, envio_gratis
+            costo, margen_pct, categoria_nombre, envio_gratis
         )
-
         if not precio_competencia:
-            return precio_minimo
-
-        # Estrategia: estar 3-5% por debajo del competidor mediano
-        # pero nunca por debajo del precio mínimo con margen
+            calculo = self.calculadora.calcular(precio_minimo, costo, categoria_nombre, envio_gratis)
+            return {"precio": round(precio_minimo, 2),
+                    "margen_real_pct": calculo["margen_neto_pct"],
+                    "ganancia_por_venta": calculo["ganancia_neta"],
+                    "desglose": calculo}
         precio_competitivo = precio_competencia * 0.97
-
         precio_final = max(precio_minimo, precio_competitivo)
-
-        # Calcular margen real con el precio final
-        calculo = self.calculadora.calcular(precio_final, costo_droppers, categoria_nombre, envio_gratis)
-
-        return {
-            "precio": round(precio_final, 2),
-            "margen_real_pct": calculo["margen_neto_pct"],
-            "ganancia_por_venta": calculo["ganancia_neta"],
-            "desglose": calculo,
-        }
+        calculo = self.calculadora.calcular(precio_final, costo, categoria_nombre, envio_gratis)
+        return {"precio": round(precio_final, 2),
+                "margen_real_pct": calculo["margen_neto_pct"],
+                "ganancia_por_venta": calculo["ganancia_neta"],
+                "desglose": calculo}
 
     def publicar_producto(self, producto_droppers, config_publicacion):
-        """
-        Publica un producto en ML con optimización de IA.
-
-        config_publicacion = {
-            "categoria_nombre":  "Electrónica",
-            "categoria_id":      "MLA1000",
-            "margen_pct":        25,        # % de ganancia deseado
-            "envio_gratis":      True,
-            "tamaño_envio":      "mediano",
-            "costo_droppers":    5000,
-        }
-        """
         try:
-            cat_nombre = config_publicacion["categoria_nombre"]
-            cat_id     = config_publicacion["categoria_id"]
-            margen_pct = config_publicacion["margen_pct"]
+            cat_nombre   = config_publicacion["categoria_nombre"]
+            cat_id       = config_publicacion["categoria_id"]
+            margen_pct   = config_publicacion["margen_pct"]
             envio_gratis = config_publicacion.get("envio_gratis", False)
-            # Usar el costo del producto individual, no el del config global
-            costo = producto_droppers.get("costo", 0) or config_publicacion.get("costo_droppers", 0)
+            costo        = producto_droppers.get("costo", 0) or config_publicacion.get("costo_droppers", 0)
+            titulo_orig  = producto_droppers.get("titulo", "")
 
-            # Si no hay costo, no podemos calcular el precio
             if costo == 0:
-                return {"ok": False, "error": "Producto sin precio de costo — cargá el precio en Droppers"}
+                return {"ok": False, "error": f"Sin precio: {titulo_orig[:40]}"}
 
-            # Buscar categoría ML sugerida por la API según el título
-            try:
-                sugerencia = self.ml.get("/sites/MLA/domain_discovery/search", params={
-                    "q": producto_droppers.get("titulo","")[:50],
-                    "limit": 1
-                })
-                if sugerencia and len(sugerencia) > 0:
-                    cat_id_sugerido = sugerencia[0].get("category_id", cat_id)
-                    if cat_id_sugerido:
-                        cat_id = cat_id_sugerido
-            except:
-                pass
+            # 1. Detectar categoría hoja correcta
+            cat_id_sugerido = self.obtener_categoria_correcta(titulo_orig)
+            if cat_id_sugerido:
+                cat_id = cat_id_sugerido
 
-            # 1. Buscar precio de competencia
-            precio_comp = self.buscar_precio_competencia(
-                producto_droppers.get("titulo", ""), cat_id
-            )
+            # 2. Obtener atributos requeridos por la categoría
+            atributos_requeridos = self.obtener_atributos_requeridos(cat_id)
 
-            # 2. Calcular precio óptimo
+            # 3. Buscar precio de competencia
+            precio_comp = self.buscar_precio_competencia(titulo_orig, cat_id)
+
+            # 4. Calcular precio con margen
             precio_info = self.calcular_precio_publicacion(
                 costo, margen_pct, cat_nombre, envio_gratis, precio_comp
             )
-            precio_final = precio_info["precio"] if isinstance(precio_info, dict) else precio_info
+            precio_final = precio_info["precio"]
 
-            # 3. Generar listing optimizado con IA
+            # 5. Generar listing con IA
             listing = self.generador.optimizar_para_ml(
-                producto_droppers, cat_nombre, margen_pct, envio_gratis, precio_comp
+                producto_droppers, cat_nombre, margen_pct,
+                envio_gratis, precio_comp, atributos_requeridos
             )
 
-            # 4. Armar el cuerpo de la publicación para ML
-            condicion = "new"
-            tipo_listing = "free"  # free = gratis, siempre empezar así en cuenta nueva
+            # 6. Garantizar atributo BRAND siempre presente
+            atributos_listing = listing.get("atributos", [])
+            ids_presentes = [a.get("id") for a in atributos_listing]
+            if "BRAND" not in ids_presentes:
+                atributos_listing.insert(0, {"id": "BRAND", "value_name": "Genérico"})
 
+            # Agregar atributos requeridos que falten
+            for attr_id in atributos_requeridos:
+                if attr_id not in [a.get("id") for a in atributos_listing]:
+                    atributos_listing.append({"id": attr_id, "value_name": "No especificado"})
+
+            # 7. Condiciones de venta con garantía
+            sale_terms = [
+                {"id": "WARRANTY_TYPE",   "value_name": "Garantía del vendedor"},
+                {"id": "WARRANTY_TIME",   "value_name": f"{GARANTIA_DIAS} días"},
+            ]
+
+            # 8. Descripción con entrega
+            descripcion = listing.get("descripcion", "")
+            if "72" not in descripcion and "hábil" not in descripcion:
+                descripcion += f"\n\n📦 ENTREGA: Despachamos dentro de las 72 horas hábiles desde la confirmación del pago."
+
+            # 9. Filtrar imágenes válidas
+            imagenes = [
+                {"source": url}
+                for url in producto_droppers.get("imagenes", [])[:6]
+                if url and url.startswith("http")
+            ]
+
+            # 10. Armar cuerpo
             cuerpo = {
-                "title":            listing["titulo"],
-                "category_id":      cat_id,
-                "price":            precio_final,
-                "currency_id":      "ARS",
+                "title":              listing["titulo"],
+                "category_id":        cat_id,
+                "price":              precio_final,
+                "currency_id":        "ARS",
                 "available_quantity": 1,
-                "buying_mode":      "buy_it_now",
-                "condition":        condicion,
-                "listing_type_id":  tipo_listing,
-                "description": {
-                    "plain_text": listing["descripcion"]
-                },
-                "pictures": [
-                    {"source": url} for url in producto_droppers.get("imagenes", [])[:6]
-                    if url and url.startswith("http")
-                ],
-                "shipping": {
-                    "mode": "not_specified",
-                    "free_shipping": False,
-                },
-                "sale_terms": [],
-                "attributes": [
-                    {"id": "BRAND", "value_name": "Genérico"}
-                ],
+                "buying_mode":        "buy_it_now",
+                "condition":          "new",
+                "listing_type_id":    "free",
+                "description":        {"plain_text": descripcion},
+                "pictures":           imagenes,
+                "shipping":           {"mode": "not_specified", "free_shipping": False},
+                "sale_terms":         sale_terms,
+                "attributes":         atributos_listing,
             }
 
-            # 5. Publicar en ML
+            # 11. Publicar
             resultado = self.ml.post("/items", cuerpo)
 
             if resultado.get("id"):
@@ -290,72 +290,52 @@ class PublicadorML:
                     "item_id":      resultado["id"],
                     "titulo":       listing["titulo"],
                     "precio":       precio_final,
-                    "margen_pct":   precio_info["margen_real_pct"] if isinstance(precio_info, dict) else margen_pct,
-                    "ganancia":     precio_info["ganancia_por_venta"] if isinstance(precio_info, dict) else 0,
-                    "envio_gratis": envio_gratis,
-                    "score_ia":     listing.get("score_estimado", 0),
+                    "margen_pct":   precio_info["margen_real_pct"],
+                    "ganancia":     precio_info["ganancia_por_venta"],
                     "permalink":    resultado.get("permalink", ""),
+                    "score_ia":     listing.get("score_estimado", 0),
                 }
             else:
-                return {"ok": False, "error": resultado.get("message", "Error desconocido"), "detalle": resultado}
+                causas = resultado.get("cause", resultado.get("causes", []))
+                errores = [c.get("message", c.get("code", "")) for c in causas] if causas else [resultado.get("message", "Error")]
+                return {"ok": False, "error": " | ".join(errores), "detalle": resultado}
 
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
     def publicar_masivo(self, productos, config_publicacion, callback=None):
-        """
-        Publica una lista de productos.
-        callback(progreso, total, resultado) se llama por cada publicación.
-        """
         resultados = []
         total = len(productos)
-
         for i, producto in enumerate(productos):
             resultado = self.publicar_producto(producto, config_publicacion)
             resultados.append(resultado)
-
             if callback:
                 callback(i + 1, total, resultado)
-
         exitosos = sum(1 for r in resultados if r.get("ok"))
-        return {
-            "total":     total,
-            "exitosos":  exitosos,
-            "fallidos":  total - exitosos,
-            "resultados": resultados,
-        }
+        return {"total": total, "exitosos": exitosos,
+                "fallidos": total - exitosos, "resultados": resultados}
 
     def monitorear_efectividad(self):
-        """
-        Revisa todas las publicaciones activas y reescribe las que
-        tienen efectividad menor al 66%.
-        """
         try:
-            uid = self.ml.cfg["ML_USER_ID"]
             items_data = self.ml.obtener_mis_publicaciones()
-            item_ids = items_data.get("results", [])
+            item_ids   = items_data.get("results", [])
             reescritos = []
-
-            for item_id in item_ids[:20]:  # revisar hasta 20 por ciclo
+            for item_id in item_ids[:20]:
                 try:
-                    item = self.ml.obtener_detalle_item(item_id)
+                    item  = self.ml.obtener_detalle_item(item_id)
                     salud = self.ml.get(f"/items/{item_id}/health")
                     score = salud.get("overall", {}).get("points", 100)
-
                     if score < 66:
                         nuevo = self.generador.reescribir_si_baja_efectividad(
-                            item_id, item.get("title",""), "",
-                            score, item.get("category_id","")
-                        )
-                        # Actualizar título en ML
+                            item_id, item.get("title",""), "", score, item.get("category_id",""))
                         self.ml.post(f"/items/{item_id}", {
                             "title": nuevo["titulo_nuevo"],
                             "description": {"plain_text": nuevo["descripcion_nueva"]}
                         })
-                        reescritos.append({"item_id": item_id, "score_anterior": score, "titulo_nuevo": nuevo["titulo_nuevo"]})
+                        reescritos.append({"item_id": item_id, "score_anterior": score,
+                                           "titulo_nuevo": nuevo["titulo_nuevo"]})
                 except:
                     pass
-
             return reescritos
-        except Exception as e:
+        except:
             return []
