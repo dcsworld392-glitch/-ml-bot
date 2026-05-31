@@ -1729,8 +1729,18 @@ async function abrirModalPromoConDescuento(itemId, pct) {
 }
 
 async function mejorarPublicacionIndividual(itemId, btn) {
+  btn.textContent = '⏳ 0%';
   btn.disabled = true;
-  btn.style.opacity = '.6';
+  btn.style.opacity = '.8';
+  btn.style.background = '#185FA5';
+
+  // Progreso visual mientras trabaja
+  let pct = 0;
+  const progIv = setInterval(() => {
+    pct = Math.min(pct + 5, 90);
+    btn.textContent = `⏳ ${pct}%`;
+  }, 800);
+
   try {
     const r = await fetch('/api/mejorar-publicacion-individual', {
       method: 'POST',
@@ -1738,10 +1748,28 @@ async function mejorarPublicacionIndividual(itemId, btn) {
       body: JSON.stringify({item_id: itemId})
     });
     const d = await r.json();
-    if (d.ok) {
-      btn.textContent = `✅ Mejorado (${d.score_estimado}% est.)`;
+    clearInterval(progIv);
+
+    if (d.ok && d.accion !== 'ya_ok') {
+      btn.textContent = `✅ ${d.score_anterior||'?'}% → ${d.score_estimado||80}%`;
       btn.style.background = '#3B6D11';
-      setTimeout(() => cargarReportePub(), 3000);
+      btn.style.opacity = '1';
+      // Actualizar solo el badge de calidad sin recargar toda la lista
+      const card = btn.closest('div');
+      if (card) {
+        const badges = card.querySelectorAll('span');
+        badges.forEach(b => {
+          if (b.textContent.includes('% —') || b.textContent.includes('% Baja') || b.textContent.includes('% Reg')) {
+            b.style.background = '#EAF3DE';
+            b.style.color = '#3B6D11';
+            b.textContent = `${d.score_estimado||80}% — Mejorado`;
+          }
+        });
+      }
+    } else if (d.accion === 'ya_ok') {
+      btn.textContent = '✅ Ya está OK';
+      btn.style.background = '#3B6D11';
+      btn.style.opacity = '1';
     } else {
       btn.textContent = '❌ Error';
       btn.style.background = '#A32D2D';
@@ -1749,7 +1777,9 @@ async function mejorarPublicacionIndividual(itemId, btn) {
       btn.style.opacity = '1';
     }
   } catch(e) {
+    clearInterval(progIv);
     btn.textContent = '❌ Error';
+    btn.style.background = '#A32D2D';
     btn.disabled = false;
     btn.style.opacity = '1';
   }
@@ -2255,13 +2285,23 @@ def api_reporte_publicaciones():
         item_ids = items_data.get("results", [])
 
         # Cargar productos de Droppers para cruzar costos
+        # Primero intentar del scraper en memoria, luego del archivo JSON
         productos_droppers = scraper_estado.get("productos", [])
+        if not productos_droppers:
+            try:
+                json_path = os.path.join(os.path.dirname(__file__), "productos_droppers.json")
+                if os.path.exists(json_path):
+                    with open(json_path, "r", encoding="utf-8") as f:
+                        productos_droppers = json.load(f)
+            except:
+                pass
+
         costos_map = {}
         for p in productos_droppers:
-            titulo = p.get("titulo", "").lower()
+            titulo = p.get("titulo", "").lower().strip()
             costo = p.get("costo", 0)
             if costo > 0 and titulo:
-                costos_map[titulo[:30]] = costo
+                costos_map[titulo] = costo
 
         from costos import CalculadoraCostos
         calc = CalculadoraCostos()
@@ -2297,13 +2337,28 @@ def api_reporte_publicaciones():
                     calidad_label = "Sin datos"
                     score = 0
 
-                # Costo Droppers (cruzar por título)
+                # Costo Droppers (cruzar por título con mejor matching)
                 costo = 0
-                titulo_lower = titulo.lower()[:30]
-                for key, val in costos_map.items():
-                    if key[:20] in titulo_lower or titulo_lower[:20] in key:
-                        costo = val
-                        break
+                titulo_lower = titulo.lower().strip()
+                # Exact match first
+                if titulo_lower in costos_map:
+                    costo = costos_map[titulo_lower]
+                else:
+                    # Fuzzy match - first 4 words
+                    palabras_titulo = titulo_lower.split()[:4]
+                    for key, val in costos_map.items():
+                        palabras_key = key.split()[:4]
+                        coincidencias = sum(1 for w in palabras_titulo if w in palabras_key)
+                        if coincidencias >= 3:
+                            costo = val
+                            break
+                    # If still no match, try 20 char prefix
+                    if not costo:
+                        prefix = titulo_lower[:20]
+                        for key, val in costos_map.items():
+                            if prefix in key or key[:20] in titulo_lower:
+                                costo = val
+                                break
 
                 # Desglose de costos
                 desglose = {}
