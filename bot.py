@@ -673,7 +673,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #f0ede8;border-bottom:0.5px solid #f0ede8;margin-bottom:16px">
         <div><p style="font-size:12px;font-weight:500">🚚 Envío gratis</p><p style="font-size:11px;color:#999">Aumenta el CTR. El costo se suma al precio automáticamente.</p></div>
         <label style="position:relative;width:44px;height:24px;flex-shrink:0">
-          <input type="checkbox" id="pub-envio" style="opacity:0;width:0;height:0">
+          <input type="checkbox" id="pub-envio" onchange="toggleEnvio()" style="opacity:0;width:0;height:0">
           <span id="pub-envio-slider" onclick="document.getElementById('pub-envio').click()" style="position:absolute;inset:0;background:#d1d5db;border-radius:24px;cursor:pointer;transition:.3s"></span>
         </label>
       </div>
@@ -751,6 +751,11 @@ async function cargarPubCategorias() {
       document.getElementById('btn-pub').style.opacity = '1';
     }
   } catch(e) {}
+}
+
+function toggleEnvio() {
+  const envio = document.getElementById('pub-envio').checked;
+  document.getElementById('pub-envio-slider').style.background = envio ? '#639922' : '#d1d5db';
 }
 
 async function iniciarScrape() {
