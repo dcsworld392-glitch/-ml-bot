@@ -1602,6 +1602,9 @@ HISTORIAL_DIR = "/tmp/ml_reportes"
 # Crear directorio de historial si no existe
 os.makedirs(HISTORIAL_DIR, exist_ok=True)
 
+# Variable global de progreso de mejora
+mejora_progreso = {"corriendo": False, "actual": 0, "total": 0, "producto_actual": "", "mejorados": 0, "resultados": []}
+
 def guardar_mejora_progreso():
     try:
         with open(MEJORA_FILE, "w") as f:
@@ -1803,6 +1806,7 @@ def api_reporte_calidad_pdf(reporte_id=None):
 
 @app.route("/api/progreso-mejora")
 def api_progreso_mejora():
+    global mejora_progreso
     return jsonify(mejora_progreso)
 
 
