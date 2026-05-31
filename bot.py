@@ -1480,9 +1480,27 @@ def api_mejorar_calidad():
     try:
         from publicador import PublicadorML
         pub = PublicadorML(sistema.ml, CONFIG.get("ANTHROPIC_API_KEY", ""))
-        resultados = pub.ciclo_mejora_calidad(meta_score=75)
-        log(f"✅ Mejora de calidad: {len(resultados)} publicaciones mejoradas")
-        return jsonify({"ok": True, "mejoradas": len(resultados), "detalle": resultados})
+        # Usar el user_id correcto
+        user_id = CONFIG.get("ML_USER_ID", "211711561")
+        items_data = sistema.ml.get(f"/users/{user_id}/items/search",
+                                     params={"status": "active", "limit": 50})
+        item_ids = items_data.get("results", [])
+        log(f"🔍 Revisando calidad de {len(item_ids)} publicaciones...")
+        mejorados = []
+        for item_id in item_ids:
+            try:
+                health = sistema.ml.get(f"/items/{item_id}/health")
+                score = health.get("overall", {}).get("points", 100)
+                if score < 75:
+                    item_data = sistema.ml.get(f"/items/{item_id}")
+                    resultado = pub.mejorar_calidad_publicacion(item_id, item_data, health)
+                    if resultado.get("ok") and resultado.get("accion") != "ya_ok":
+                        mejorados.append(resultado)
+                        log(f"✅ {item_id}: {score}% → mejorado")
+            except Exception as e:
+                log(f"❌ Error en {item_id}: {e}")
+        log(f"✅ Mejora completada: {len(mejorados)}/{len(item_ids)} mejoradas")
+        return jsonify({"ok": True, "mejoradas": len(mejorados), "total": len(item_ids), "detalle": mejorados})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
