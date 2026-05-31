@@ -657,39 +657,85 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
         <p style="font-size:11px;color:#999;margin-bottom:8px">Productos encontrados: <strong id="prod-count" style="color:#185FA5">0</strong></p>
         <div id="prod-lista" style="max-height:160px;overflow-y:auto;background:#F7F6F3;border-radius:8px;padding:10px;font-size:12px"></div>
       </div>
-      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:12px">Paso 2 — Configurá margen y categoría ML</p>
-      <div class="g2" style="margin-bottom:14px">
+
+      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:12px">Paso 2 — Configurá margen y estrategia de precio</p>
+
+      <div class="g2" style="margin-bottom:10px">
         <div>
-          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen de ganancia (%)</label>
-          <input type="number" id="pub-margen" value="25" min="5" max="80" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen mínimo (%)</label>
+          <input type="number" id="pub-margen-min" value="15" min="5" max="50" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+          <p style="font-size:10px;color:#999;margin-top:3px">No publicar por debajo de este margen</p>
         </div>
+        <div>
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen máximo (%)</label>
+          <input type="number" id="pub-margen-max" value="35" min="10" max="80" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+          <p style="font-size:10px;color:#999;margin-top:3px">Límite superior de ganancia</p>
+        </div>
+      </div>
+
+      <div id="margen-info" style="background:#F7F6F3;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#666;line-height:1.5">
+        La IA analizará la competencia y elegirá el precio óptimo entre <strong id="margen-label">15% y 35%</strong> para maximizar ventas.
+      </div>
+
+      <div class="g2" style="margin-bottom:14px">
         <div>
           <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría en ML</label>
           <select id="pub-categoria" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
             <option value="">Seleccioná...</option>
           </select>
         </div>
+        <div>
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Estrategia de precio</label>
+          <select id="pub-estrategia" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <option value="competitivo">Competitivo (3% bajo competencia)</option>
+            <option value="volumen">Volumen (máximo 5% bajo competencia)</option>
+            <option value="margen">Margen máximo (ignorar competencia)</option>
+          </select>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #f0ede8;border-bottom:0.5px solid #f0ede8;margin-bottom:16px">
-        <div><p style="font-size:12px;font-weight:500">🚚 Envío gratis</p><p style="font-size:11px;color:#999">Aumenta el CTR. El costo se suma al precio automáticamente.</p></div>
-        <label style="position:relative;width:44px;height:24px;flex-shrink:0">
-          <input type="checkbox" id="pub-envio" onchange="toggleEnvio()" style="opacity:0;width:0;height:0">
-          <span id="pub-envio-slider" onclick="document.getElementById('pub-envio').click()" style="position:absolute;inset:0;background:#d1d5db;border-radius:24px;cursor:pointer;transition:.3s"></span>
-        </label>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#F7F6F3;border-radius:8px;margin-bottom:16px;cursor:pointer" onclick="clickEnvio()">
+        <div>
+          <p style="font-size:12px;font-weight:500;color:#1a1a1a">🚚 Envío gratis</p>
+          <p style="font-size:11px;color:#999;margin-top:2px">Aumenta el CTR. El costo se suma al precio automáticamente.</p>
+        </div>
+        <div style="position:relative;width:44px;height:24px;flex-shrink:0">
+          <input type="checkbox" id="pub-envio" style="opacity:0;position:absolute;width:0;height:0">
+          <div id="pub-envio-track" style="position:absolute;inset:0;background:#d1d5db;border-radius:24px;transition:background .2s;cursor:pointer">
+            <div id="pub-envio-thumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;background:white;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+          </div>
+        </div>
       </div>
-      <button id="btn-pub" onclick="iniciarPublicacion()" disabled style="width:100%;background:#1a1a1a;color:#fff;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;opacity:.4">
+
+      <button id="btn-pub" onclick="iniciarPublicacion()" disabled style="width:100%;background:#1a1a1a;color:#fff;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:500;cursor:not-allowed;font-family:'Inter',sans-serif;opacity:.4;transition:opacity .2s">
         🚀 Publicar catálogo completo con IA
       </button>
+      <p id="btn-pub-hint" style="font-size:11px;color:#999;text-align:center;margin-top:6px">Primero traé el catálogo de Droppers</p>
+
       <div id="pub-progreso" style="display:none;margin-top:16px">
-        <p style="font-size:12px;margin-bottom:6px;font-weight:500">Publicando... <span id="pub-prog-txt">0/0</span></p>
-        <div style="height:6px;background:#e5e3de;border-radius:3px;overflow:hidden;margin-bottom:12px"><div id="pub-prog-barra" style="height:100%;background:#3B6D11;border-radius:3px;transition:width .3s;width:0%"></div></div>
-        <div id="pub-reporte" style="display:none;margin-bottom:12px">
-          <p style="font-size:11px;font-weight:600;color:#3B6D11;margin-bottom:6px">✅ Precios competitivos</p>
-          <div id="pub-competitivos" style="margin-bottom:10px"></div>
-          <p style="font-size:11px;font-weight:600;color:#A32D2D;margin-bottom:6px">⚠️ Revisar precio</p>
-          <div id="pub-no-competitivos"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <p style="font-size:12px;font-weight:500">Publicando... <span id="pub-prog-txt">0/0</span></p>
+          <p style="font-size:11px;color:#999" id="pub-prog-eta"></p>
         </div>
-        <div id="pub-resultados"></div>
+        <div style="height:6px;background:#e5e3de;border-radius:3px;overflow:hidden;margin-bottom:14px"><div id="pub-prog-barra" style="height:100%;background:#3B6D11;border-radius:3px;transition:width .3s;width:0%"></div></div>
+        <div id="pub-reporte" style="display:none;margin-bottom:12px">
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <div style="background:#EAF3DE;border-radius:8px;padding:8px 12px;flex:1;text-align:center">
+              <p style="font-size:18px;font-weight:600;color:#3B6D11" id="rep-ok">0</p>
+              <p style="font-size:10px;color:#3B6D11;font-weight:500">Publicados</p>
+            </div>
+            <div style="background:#FCEBEB;border-radius:8px;padding:8px 12px;flex:1;text-align:center">
+              <p style="font-size:18px;font-weight:600;color:#A32D2D" id="rep-err">0</p>
+              <p style="font-size:10px;color:#A32D2D;font-weight:500">Errores</p>
+            </div>
+            <div style="background:#F7F6F3;border-radius:8px;padding:8px 12px;flex:1;text-align:center">
+              <p style="font-size:18px;font-weight:600;color:#185FA5" id="rep-margin">0%</p>
+              <p style="font-size:10px;color:#185FA5;font-weight:500">Margen prom.</p>
+            </div>
+          </div>
+          <div id="pub-errores-lista" style="max-height:200px;overflow-y:auto"></div>
+        </div>
+        <div id="pub-resultados" style="max-height:200px;overflow-y:auto"></div>
       </div>
     </div>
   </div>
@@ -702,6 +748,26 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
 <script>
 let pubCategorias = [];
 let productosDroppers = [];
+let pubEnvioActivo = false;
+
+function clickEnvio() {
+  pubEnvioActivo = !pubEnvioActivo;
+  document.getElementById('pub-envio').checked = pubEnvioActivo;
+  document.getElementById('pub-envio-track').style.background = pubEnvioActivo ? '#639922' : '#d1d5db';
+  document.getElementById('pub-envio-thumb').style.transform = pubEnvioActivo ? 'translateX(20px)' : 'translateX(0)';
+}
+
+function toggleEnvio() {
+  pubEnvioActivo = document.getElementById('pub-envio').checked;
+  document.getElementById('pub-envio-track').style.background = pubEnvioActivo ? '#639922' : '#d1d5db';
+  document.getElementById('pub-envio-thumb').style.transform = pubEnvioActivo ? 'translateX(20px)' : 'translateX(0)';
+}
+
+function actualizarMargenLabel() {
+  const min = document.getElementById('pub-margen-min').value || 15;
+  const max = document.getElementById('pub-margen-max').value || 35;
+  document.getElementById('margen-label').textContent = `${min}% y ${max}%`;
+}
 
 function togglePublicar() {
   const p = document.getElementById('panel-publicar');
@@ -713,49 +779,52 @@ function togglePublicar() {
 }
 
 async function cargarPubCategorias() {
-  // Categorías de Droppers
   try {
     const r = await fetch('/api/categorias-droppers');
     const cats = await r.json();
     const sel = document.getElementById('pub-cat-droppers');
     sel.innerHTML = '<option value="">Seleccioná una categoría</option>' + cats.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
   } catch(e) {}
-  // Categorías ML
   try {
     const r = await fetch('/api/categorias-ml');
     pubCategorias = await r.json();
     const sel = document.getElementById('pub-categoria');
     sel.innerHTML = '<option value="">Seleccioná...</option>' + pubCategorias.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
   } catch(e) {}
-  // Verificar si ya hay productos cargados
   try {
     const r = await fetch('/api/estado-scrape');
     const d = await r.json();
     if (d.productos > 0) {
       const r2 = await fetch('/api/productos-scrapeados');
       productosDroppers = await r2.json();
-      document.getElementById('prod-count').textContent = productosDroppers.length;
-      document.getElementById('prod-lista').innerHTML = productosDroppers.slice(0,10).map(p =>
-        `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e5e3de">
-          <span style="color:#1a1a1a">${p.titulo.substring(0,45)}</span>
-          <span style="color:#3B6D11;font-weight:500;flex-shrink:0;margin-left:8px">${p.costo > 0 ? '$'+p.costo.toLocaleString('es-AR') : 'sin precio'}</span>
-        </div>`
-      ).join('') + (productosDroppers.length > 10 ? `<p style="color:#999;font-size:11px;margin-top:6px">... y ${productosDroppers.length-10} más</p>` : '');
-      document.getElementById('prod-preview').style.display = 'block';
-      document.getElementById('scrape-estado').style.display = 'block';
-      document.getElementById('scrape-titulo').textContent = `✅ ${productosDroppers.length} productos listos para publicar`;
-      document.getElementById('scrape-barra').style.width = '100%';
-      document.getElementById('scrape-barra').style.background = '#639922';
-      document.getElementById('scrape-cant').textContent = `${productosDroppers.length} productos cargados`;
-      document.getElementById('btn-pub').disabled = false;
-      document.getElementById('btn-pub').style.opacity = '1';
+      mostrarPreviewProductos();
+      habilitarBotonPublicar();
     }
   } catch(e) {}
 }
 
-function toggleEnvio() {
-  const envio = document.getElementById('pub-envio').checked;
-  document.getElementById('pub-envio-slider').style.background = envio ? '#639922' : '#d1d5db';
+function mostrarPreviewProductos() {
+  document.getElementById('prod-count').textContent = productosDroppers.length;
+  document.getElementById('prod-lista').innerHTML = productosDroppers.slice(0,10).map(p =>
+    `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e5e3de">
+      <span style="color:#1a1a1a">${p.titulo.substring(0,45)}</span>
+      <span style="color:${p.costo>0?'#3B6D11':'#A32D2D'};font-weight:500;flex-shrink:0;margin-left:8px">${p.costo > 0 ? '$'+p.costo.toLocaleString('es-AR') : '⚠️ sin precio'}</span>
+    </div>`
+  ).join('') + (productosDroppers.length > 10 ? `<p style="color:#999;font-size:11px;margin-top:6px">... y ${productosDroppers.length-10} más</p>` : '');
+  document.getElementById('prod-preview').style.display = 'block';
+  document.getElementById('scrape-estado').style.display = 'block';
+  document.getElementById('scrape-titulo').textContent = `✅ ${productosDroppers.length} productos listos`;
+  document.getElementById('scrape-barra').style.width = '100%';
+  document.getElementById('scrape-barra').style.background = '#639922';
+  document.getElementById('scrape-cant').textContent = `${productosDroppers.filter(p=>p.costo>0).length} con precio · ${productosDroppers.filter(p=>!p.costo).length} sin precio`;
+}
+
+function habilitarBotonPublicar() {
+  const btn = document.getElementById('btn-pub');
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  btn.style.cursor = 'pointer';
+  document.getElementById('btn-pub-hint').style.display = 'none';
 }
 
 async function iniciarScrape() {
@@ -765,11 +834,11 @@ async function iniciarScrape() {
   document.getElementById('scrape-titulo').textContent = `Obteniendo catálogo de "${cat}"...`;
   document.getElementById('scrape-cant').textContent = 'Esto puede tardar 1-2 minutos...';
   document.getElementById('scrape-barra').style.width = '20%';
+  document.getElementById('scrape-barra').style.background = '#185FA5';
   document.getElementById('prod-preview').style.display = 'none';
   document.getElementById('btn-pub').disabled = true;
   document.getElementById('btn-pub').style.opacity = '.4';
   await fetch('/api/scrape-droppers', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({categoria: cat})});
-  // Polling
   const iv = setInterval(async () => {
     const r = await fetch('/api/estado-scrape');
     const d = await r.json();
@@ -777,28 +846,14 @@ async function iniciarScrape() {
     document.getElementById('scrape-cant').textContent = `${d.productos} productos encontrados`;
     if (!d.corriendo && d.productos > 0) {
       clearInterval(iv);
-      document.getElementById('scrape-titulo').textContent = `✅ Catálogo listo — ${d.productos} productos`;
-      document.getElementById('scrape-barra').style.background = '#639922';
-      // Cargar preview
       const r2 = await fetch('/api/productos-scrapeados');
       productosDroppers = await r2.json();
-      document.getElementById('prod-count').textContent = productosDroppers.length;
-      document.getElementById('prod-lista').innerHTML = productosDroppers.slice(0,10).map(p =>
-        `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e5e3de">
-          <span style="color:#1a1a1a">${p.titulo.substring(0,45)}</span>
-          <span style="color:#3B6D11;font-weight:500;flex-shrink:0;margin-left:8px">$${p.costo.toLocaleString('es-AR')}</span>
-        </div>`
-      ).join('') + (productosDroppers.length > 10 ? `<p style="color:#999;font-size:11px;margin-top:6px">... y ${productosDroppers.length-10} más</p>` : '');
-      document.getElementById('prod-preview').style.display = 'block';
-      document.getElementById('btn-pub').disabled = false;
-      document.getElementById('btn-pub').style.opacity = '1';
-      // Auto-seleccionar categoría ML sugerida
-      const r3 = await fetch('/api/estado-scrape');
-      const d3 = await r3.json();
+      mostrarPreviewProductos();
+      habilitarBotonPublicar();
     }
     if (!d.corriendo && d.productos === 0) {
       clearInterval(iv);
-      document.getElementById('scrape-titulo').textContent = '❌ No se encontraron productos — intentá con otra categoría';
+      document.getElementById('scrape-titulo').textContent = '❌ No se encontraron productos';
     }
   }, 3000);
 }
@@ -808,33 +863,65 @@ async function iniciarPublicacion() {
   const cat = document.getElementById('pub-categoria').value;
   const catData = pubCategorias.find(c=>c.nombre===cat);
   if (!cat||!catData) { alert('Seleccioná la categoría de ML'); return; }
-  const margen = parseFloat(document.getElementById('pub-margen').value)||25;
-  const envio = document.getElementById('pub-envio').checked;
-  document.getElementById('pub-envio-slider').style.background = envio ? '#639922' : '#d1d5db';
-  const config = {categoria_nombre:cat, categoria_id:catData.id, margen_pct:margen, envio_gratis:envio, costo_droppers:0};
-  document.getElementById('btn-pub').disabled = true;
-  document.getElementById('btn-pub').textContent = '⏳ Publicando...';
+  const margenMin = parseFloat(document.getElementById('pub-margen-min').value)||15;
+  const margenMax = parseFloat(document.getElementById('pub-margen-max').value)||35;
+  const estrategia = document.getElementById('pub-estrategia').value;
+  const envio = pubEnvioActivo;
+  const config = {
+    categoria_nombre: cat,
+    categoria_id: catData.id,
+    margen_pct: margenMin,
+    margen_min: margenMin,
+    margen_max: margenMax,
+    estrategia: estrategia,
+    envio_gratis: envio,
+    costo_droppers: 0
+  };
+  const btn = document.getElementById('btn-pub');
+  btn.disabled = true;
+  btn.textContent = '⏳ Publicando...';
   document.getElementById('pub-progreso').style.display = 'block';
+  document.getElementById('pub-reporte').style.display = 'none';
+  const inicio = Date.now();
   await fetch('/api/publicar-masivo', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({productos:productosDroppers, config})});
   const iv = setInterval(async()=>{
-    const r=await fetch('/api/progreso-publicacion');
-    const p=await r.json();
-    const pct=p.total>0?(p.actual/p.total*100):0;
-    document.getElementById('pub-prog-txt').textContent=`${p.actual}/${p.total}`;
-    document.getElementById('pub-prog-barra').style.width=pct+'%';
-    if (!p.corriendo && p.actual>=p.total && p.total>0) {
+    const r = await fetch('/api/progreso-publicacion');
+    const p = await r.json();
+    const pct = p.total>0?(p.actual/p.total*100):0;
+    document.getElementById('pub-prog-txt').textContent = `${p.actual}/${p.total}`;
+    document.getElementById('pub-prog-barra').style.width = pct+'%';
+    // ETA
+    if (p.actual > 0) {
+      const elapsed = (Date.now()-inicio)/1000;
+      const eta = Math.round((elapsed/p.actual)*(p.total-p.actual));
+      document.getElementById('pub-prog-eta').textContent = eta > 0 ? `~${eta}s restantes` : '';
+    }
+    // Live feed
+    document.getElementById('pub-resultados').innerHTML = p.resultados.slice(-8).reverse().map(r=>
+      `<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:0.5px solid #f0ede8;font-size:11px">
+        <span style="background:${r.ok?'#EAF3DE':'#FCEBEB'};color:${r.ok?'#3B6D11':'#A32D2D'};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;flex-shrink:0">${r.ok?'OK':'ERR'}</span>
+        <span style="flex:1;color:#1a1a1a">${r.titulo||r.error||'...'}</span>
+        ${r.ok?`<span style="color:#3B6D11;font-size:10px;flex-shrink:0">$${r.precio?.toLocaleString('es-AR')} · ${r.margen_pct?.toFixed(1)}%</span>`:''}
+      </div>`
+    ).join('');
+    if (!p.corriendo && p.actual >= p.total && p.total > 0) {
       clearInterval(iv);
-      document.getElementById('btn-pub').disabled=false;
-      document.getElementById('btn-pub').textContent='🚀 Publicar catálogo completo con IA';
-      // Mostrar reporte de competitividad
+      btn.disabled = false;
+      btn.textContent = '🚀 Publicar catálogo completo con IA';
+      // Reporte final
       const ok = p.resultados.filter(r=>r.ok);
       const err = p.resultados.filter(r=>!r.ok);
-      document.getElementById('pub-reporte').style.display='block';
-      document.getElementById('pub-competitivos').innerHTML = ok.map(r=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:0.5px solid #f0ede8;font-size:12px"><span style="background:#EAF3DE;color:#3B6D11;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">✅</span><span style="flex:1">${r.titulo||''}</span><span style="color:#3B6D11;font-size:11px;flex-shrink:0">$${r.precio?.toLocaleString('es-AR')} · ${r.margen_pct}%</span></div>`).join('');
-      document.getElementById('pub-no-competitivos').innerHTML = err.map(r=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:0.5px solid #f0ede8;font-size:12px"><span style="background:#FCEBEB;color:#A32D2D;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">⚠️</span><span style="flex:1">${r.titulo||r.error||''}</span></div>`).join('');
+      const margenProm = ok.length > 0 ? (ok.reduce((s,r)=>s+(r.margen_pct||0),0)/ok.length).toFixed(1) : 0;
+      document.getElementById('pub-reporte').style.display = 'block';
+      document.getElementById('rep-ok').textContent = ok.length;
+      document.getElementById('rep-err').textContent = err.length;
+      document.getElementById('rep-margin').textContent = margenProm+'%';
+      document.getElementById('pub-errores-lista').innerHTML = err.map(r=>
+        `<div style="padding:6px 0;border-bottom:0.5px solid #f0ede8;font-size:11px;color:#A32D2D">⚠️ ${r.titulo||''} — ${r.error||''}</div>`
+      ).join('');
+      document.getElementById('pub-prog-eta').textContent = '✅ Finalizado';
     }
-    document.getElementById('pub-resultados').innerHTML=p.resultados.slice(-5).map(r=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;font-size:11px;color:#999">${r.ok?'✅':'❌'} ${r.titulo||r.error||'...'}</div>`).join('');
-  },2000);
+  }, 2000);
 }
 async function cargarPendientes(){
   const r=await fetch('/api/ventas-pendientes');

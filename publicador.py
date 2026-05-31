@@ -209,30 +209,50 @@ class PublicadorML:
             pass
         return None
 
-    def calcular_precio_publicacion(self, costo, margen_pct, categoria_nombre,
-                                    envio_gratis, precio_competencia=None):
-        precio_minimo = self.calculadora.calcular_precio_para_margen(
-            costo, margen_pct, categoria_nombre, envio_gratis
+    def calcular_precio_inteligente(self, costo, margen_min, margen_max, categoria_nombre,
+                                    envio_gratis, precio_competencia, estrategia):
+        """Calcula el precio óptimo según estrategia y rango de margen."""
+        precio_con_margen_min = self.calculadora.calcular_precio_para_margen(
+            costo, margen_min, categoria_nombre, envio_gratis
         )
+        precio_con_margen_max = self.calculadora.calcular_precio_para_margen(
+            costo, margen_max, categoria_nombre, envio_gratis
+        )
+
         if not precio_competencia:
-            calculo = self.calculadora.calcular(precio_minimo, costo, categoria_nombre, envio_gratis)
-            return {"precio": round(precio_minimo, 2),
-                    "margen_real_pct": calculo["margen_neto_pct"],
-                    "ganancia_por_venta": calculo["ganancia_neta"],
-                    "desglose": calculo}
-        precio_competitivo = precio_competencia * 0.97
-        precio_final = max(precio_minimo, precio_competitivo)
+            # Sin competencia: usar margen medio
+            margen_medio = (margen_min + margen_max) / 2
+            precio_final = self.calculadora.calcular_precio_para_margen(
+                costo, margen_medio, categoria_nombre, envio_gratis
+            )
+        elif estrategia == "volumen":
+            # Máximo 5% bajo competencia, pero nunca bajo el margen mínimo
+            precio_agresivo = precio_competencia * 0.95
+            precio_final = max(precio_con_margen_min, precio_agresivo)
+        elif estrategia == "margen":
+            # Ignorar competencia, usar margen máximo
+            precio_final = precio_con_margen_max
+        else:
+            # Competitivo: 3% bajo competencia, entre margen_min y margen_max
+            precio_competitivo = precio_competencia * 0.97
+            precio_final = max(precio_con_margen_min, min(precio_competitivo, precio_con_margen_max))
+
+        precio_final = round(precio_final, 2)
         calculo = self.calculadora.calcular(precio_final, costo, categoria_nombre, envio_gratis)
-        return {"precio": round(precio_final, 2),
-                "margen_real_pct": calculo["margen_neto_pct"],
-                "ganancia_por_venta": calculo["ganancia_neta"],
-                "desglose": calculo}
+        return {
+            "precio": precio_final,
+            "margen_real_pct": calculo["margen_neto_pct"],
+            "ganancia_por_venta": calculo["ganancia_neta"],
+            "desglose": calculo,
+        }
 
     def publicar_producto(self, producto_droppers, config_publicacion):
         try:
             cat_nombre   = config_publicacion["categoria_nombre"]
             cat_id       = config_publicacion["categoria_id"]
-            margen_pct   = config_publicacion["margen_pct"]
+            margen_min   = config_publicacion.get("margen_min", config_publicacion.get("margen_pct", 15))
+            margen_max   = config_publicacion.get("margen_max", config_publicacion.get("margen_pct", 35))
+            estrategia   = config_publicacion.get("estrategia", "competitivo")
             envio_gratis = config_publicacion.get("envio_gratis", False)
             costo        = producto_droppers.get("costo", 0) or config_publicacion.get("costo_droppers", 0)
             titulo_orig  = producto_droppers.get("titulo", "")
@@ -240,7 +260,7 @@ class PublicadorML:
             if costo == 0:
                 return {"ok": False, "error": f"Sin precio: {titulo_orig[:40]}"}
 
-            # 1. Detectar categoría hoja correcta
+            # 1. Detectar categoría hoja correcta via API ML
             cat_id_sugerido = self.obtener_categoria_correcta(titulo_orig)
             if cat_id_sugerido:
                 cat_id = cat_id_sugerido
@@ -251,15 +271,20 @@ class PublicadorML:
             # 3. Buscar precio de competencia
             precio_comp = self.buscar_precio_competencia(titulo_orig, cat_id)
 
-            # 4. Calcular precio con margen
-            precio_info = self.calcular_precio_publicacion(
-                costo, margen_pct, cat_nombre, envio_gratis, precio_comp
+            # 4. Calcular precio inteligente con rango de margen
+            precio_info = self.calcular_precio_inteligente(
+                costo, margen_min, margen_max, cat_nombre,
+                envio_gratis, precio_comp, estrategia
             )
             precio_final = precio_info["precio"]
 
+            # Precio mínimo de ML es $1000
+            if precio_final < 1000:
+                precio_final = 1000.0
+
             # 5. Generar listing con IA
             listing = self.generador.optimizar_para_ml(
-                producto_droppers, cat_nombre, margen_pct,
+                producto_droppers, cat_nombre, margen_min,
                 envio_gratis, precio_comp, atributos_requeridos
             )
 
@@ -269,30 +294,32 @@ class PublicadorML:
             if "BRAND" not in ids_presentes:
                 atributos_listing.insert(0, {"id": "BRAND", "value_name": "Genérico"})
 
-            # Agregar EAN si está disponible y es válido
+            # Agregar EAN solo si es válido (numérico, 8+ dígitos)
             ean = listing.get("ean", "")
-            if ean and ean != "does_not_apply" and len(ean) >= 8:
-                if "GTIN" not in ids_presentes and "EAN" not in ids_presentes:
+            if ean and ean.isdigit() and len(ean) >= 8:
+                if "GTIN" not in ids_presentes:
                     atributos_listing.append({"id": "GTIN", "value_name": ean})
 
-            # Agregar atributos requeridos que falten
+            # Agregar atributos requeridos que falten (solo BRAND y atributos simples)
+            ATRIBUTOS_IGNORAR = {"VEHICLE_TYPE", "PRODUCT_TYPE", "AGE_GROUP", "MODEL"}
             for attr_id in atributos_requeridos:
                 if attr_id not in [a.get("id") for a in atributos_listing]:
-                    atributos_listing.append({"id": attr_id, "value_name": "No especificado"})
+                    if attr_id not in ATRIBUTOS_IGNORAR:
+                        atributos_listing.append({"id": attr_id, "value_name": "No especificado"})
 
             # 7. Condiciones de venta con garantía
             sale_terms = [
-                {"id": "WARRANTY_TYPE",   "value_name": "Garantía del vendedor"},
-                {"id": "WARRANTY_TIME",   "value_name": f"{GARANTIA_DIAS} días"},
+                {"id": "WARRANTY_TYPE", "value_name": "Garantía del vendedor"},
+                {"id": "WARRANTY_TIME", "value_name": f"{GARANTIA_DIAS} días"},
             ]
 
-            # 8. Descripción con entrega e info regulatoria
+            # 8. Descripción
             descripcion = listing.get("descripcion", "")
             if "72" not in descripcion and "hábil" not in descripcion:
-                descripcion += f"\n\n📦 ENTREGA: Despachamos dentro de las 72 horas hábiles desde la confirmación del pago."
+                descripcion += f"\n\nENTREGA: Despachamos dentro de las 72 horas hábiles desde la confirmación del pago."
             info_reg = listing.get("informacion_regulatoria", "")
-            if info_reg:
-                descripcion += f"\n\n⚠️ INFORMACIÓN REGULATORIA: {info_reg}"
+            if info_reg and len(info_reg) > 5:
+                descripcion += f"\n\nINFORMACION REGULATORIA: {info_reg}"
 
             # 9. Subir imágenes a ML
             imagenes = []
@@ -302,10 +329,9 @@ class PublicadorML:
                     if picture_id:
                         imagenes.append({"id": picture_id})
                     else:
-                        # Fallback: pasar URL directamente
                         imagenes.append({"source": url})
 
-            # 10. Armar cuerpo
+            # 10. Armar cuerpo (SIN description — se sube por endpoint separado)
             cuerpo = {
                 "title":              listing["titulo"],
                 "category_id":        cat_id,
@@ -315,7 +341,6 @@ class PublicadorML:
                 "buying_mode":        "buy_it_now",
                 "condition":          "new",
                 "listing_type_id":    "bronze",
-                "description":        {"plain_text": descripcion},
                 "pictures":           imagenes,
                 "shipping":           {"mode": "not_specified", "free_shipping": False},
                 "sale_terms":         sale_terms,
@@ -326,20 +351,28 @@ class PublicadorML:
             resultado = self.ml.post("/items", cuerpo)
 
             if resultado.get("id"):
+                item_id = resultado["id"]
+
+                # 12. Subir descripción por endpoint separado (requerido por ML)
+                try:
+                    self.ml.post(f"/items/{item_id}/description", {"plain_text": descripcion})
+                except:
+                    pass
+
                 return {
-                    "ok":           True,
-                    "item_id":      resultado["id"],
-                    "titulo":       listing["titulo"],
-                    "precio":       precio_final,
-                    "margen_pct":   precio_info["margen_real_pct"],
-                    "ganancia":     precio_info["ganancia_por_venta"],
-                    "permalink":    resultado.get("permalink", ""),
-                    "score_ia":     listing.get("score_estimado", 0),
+                    "ok":         True,
+                    "item_id":    item_id,
+                    "titulo":     listing["titulo"],
+                    "precio":     precio_final,
+                    "margen_pct": precio_info["margen_real_pct"],
+                    "ganancia":   precio_info["ganancia_por_venta"],
+                    "permalink":  resultado.get("permalink", ""),
+                    "score_ia":   listing.get("score_estimado", 0),
                 }
             else:
                 causas = resultado.get("cause", resultado.get("causes", []))
                 errores = [c.get("message", c.get("code", "")) for c in causas] if causas else [resultado.get("message", "Error")]
-                return {"ok": False, "error": " | ".join(errores), "detalle": resultado}
+                return {"ok": False, "error": " | ".join(errores[:2]), "detalle": resultado}
 
         except Exception as e:
             return {"ok": False, "error": str(e)}
