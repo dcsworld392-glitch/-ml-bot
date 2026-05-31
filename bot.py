@@ -1342,26 +1342,57 @@ function cerrarModalMejora() {
   document.getElementById('modal-mejora').style.display = 'none';
 }
 
+let historialTodos = [];
+
 async function verHistorial() {
   document.getElementById('modal-historial').style.display = 'flex';
+  document.getElementById('historial-lista').innerHTML = '<p style="font-size:12px;color:#999">Cargando...</p>';
   const r = await fetch('/api/historial-reportes');
-  const lista = await r.json();
+  historialTodos = await r.json();
+  renderHistorial(historialTodos);
+}
+
+function renderHistorial(lista) {
   const el = document.getElementById('historial-lista');
   if (!lista.length) {
-    el.innerHTML = '<p style="font-size:12px;color:#999">No hay reportes guardados aún.</p>';
+    el.innerHTML = '<p style="font-size:12px;color:#999;text-align:center;padding:20px 0">No hay reportes para el período seleccionado.</p>';
     return;
   }
   el.innerHTML = lista.map(rep => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid #f0ede8">
       <div>
         <p style="font-size:12px;font-weight:500;color:#1a1a1a">${rep.fecha}</p>
-        <p style="font-size:11px;color:#666">${rep.total} publicaciones revisadas · ${rep.mejorados} mejoradas</p>
+        <p style="font-size:11px;color:#666">${rep.total} revisadas · <strong style="color:#3B6D11">${rep.mejorados} mejoradas</strong></p>
       </div>
       <a href="/api/reporte-calidad-pdf/${rep.id}" target="_blank"
-         style="background:#1a1a1a;color:#fff;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;text-decoration:none;flex-shrink:0">
+         style="background:#1a1a1a;color:#fff;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:500;text-decoration:none;flex-shrink:0">
         📄 PDF
       </a>
     </div>`).join('');
+}
+
+function filtrarHistorial() {
+  const desde = document.getElementById('hist-fecha-desde').value;
+  const hasta = document.getElementById('hist-fecha-hasta').value;
+  let filtrados = historialTodos;
+  if (desde || hasta) {
+    filtrados = historialTodos.filter(rep => {
+      // El id tiene formato reporte_YYYYMMDD_HHMMSS
+      const partes = rep.id.split('_');
+      if (partes.length < 2) return true;
+      const fechaRep = partes[1]; // YYYYMMDD
+      if (desde && fechaRep < desde.replace(/-/g, '')) return false;
+      if (hasta && fechaRep > hasta.replace(/-/g, '')) return false;
+      return true;
+    });
+  }
+  renderHistorial(filtrados);
+}
+
+function limpiarFiltros() {
+  document.getElementById('hist-fecha-desde').value = '';
+  document.getElementById('hist-fecha-hasta').value = '';
+  renderHistorial(historialTodos);
 }
 
 function cerrarHistorial() {
@@ -1416,12 +1447,19 @@ setInterval(verificarToken, 300000);
 
 <!-- Modal historial reportes -->
 <div id="modal-historial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
-  <div style="background:white;border-radius:12px;padding:24px;width:520px;max-width:90vw;max-height:80vh;overflow-y:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+  <div style="background:white;border-radius:12px;padding:24px;width:560px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <p style="font-size:14px;font-weight:600;color:#1a1a1a">📋 Historial de reportes de calidad</p>
       <button onclick="cerrarHistorial()" style="background:none;border:none;color:#999;font-size:18px;cursor:pointer">✕</button>
     </div>
-    <div id="historial-lista"><p style="font-size:12px;color:#999">Cargando...</p></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="date" id="hist-fecha-desde" onchange="filtrarHistorial()"
+        style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;color:#1a1a1a">
+      <input type="date" id="hist-fecha-hasta" onchange="filtrarHistorial()"
+        style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;color:#1a1a1a">
+      <button onclick="limpiarFiltros()" class="mini-btn">Limpiar</button>
+    </div>
+    <div id="historial-lista" style="overflow-y:auto;flex:1"><p style="font-size:12px;color:#999">Cargando...</p></div>
   </div>
 </div>
 
