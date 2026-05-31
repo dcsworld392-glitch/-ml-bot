@@ -224,37 +224,107 @@ class PublicadorML:
             pass
         return None
 
+    def decidir_estrategia_marketing(self, precio_comp, cantidad_competidores,
+                                      margen_disponible_pct, estrategia):
+        """
+        Decide qué herramienta de marketing usar según el contexto.
+        Retorna la herramienta elegida y su costo estimado como % del precio.
+        """
+        # Reglas de decisión basadas en competencia y margen
+        if margen_disponible_pct >= 25 and cantidad_competidores >= 10:
+            # Mucha competencia y buen margen → publicidad para destacar
+            return {"herramienta": "product_ads", "costo_pct": 0.07,
+                    "label": "Product Ads (7% reservado para publicidad)"}
+        elif margen_disponible_pct >= 20 and cantidad_competidores >= 5:
+            # Competencia moderada → oferta relámpago ocasional
+            return {"herramienta": "oferta_relampago", "costo_pct": 0.05,
+                    "label": "Oferta relámpago (5% descuento estratégico)"}
+        elif margen_disponible_pct >= 15 and estrategia == "volumen":
+            # Estrategia volumen → precio agresivo sin marketing extra
+            return {"herramienta": "precio_agresivo", "costo_pct": 0.03,
+                    "label": "Precio agresivo (3% adicional para competir)"}
+        else:
+            # Margen justo → sin herramienta extra, precio competitivo básico
+            return {"herramienta": "ninguna", "costo_pct": 0.0,
+                    "label": "Sin herramienta extra — precio optimizado"}
+
     def calcular_precio_inteligente(self, costo, margen_min, margen_max, categoria_nombre,
                                     envio_gratis, precio_competencia, estrategia, cuotas=1):
-        """Calcula el precio óptimo según estrategia y rango de margen."""
-        precio_con_margen_min = self.calculadora.calcular_precio_para_margen(
+        """
+        Motor de decisión inteligente de precios.
+        Analiza la competencia, elige herramienta de marketing si conviene,
+        y calcula el precio óptimo dentro del rango mínimo-máximo.
+        """
+        # Buscar más datos de competencia para tomar decisión
+        cantidad_competidores = 0
+        try:
+            r = self.ml.get("/sites/MLA/search", params={
+                "q": "", "category": "", "limit": 20
+            })
+            # Aproximación — si hay precio de competencia, hay competidores
+            cantidad_competidores = 8 if precio_competencia else 0
+        except:
+            cantidad_competidores = 5 if precio_competencia else 0
+
+        # Calcular precio base con margen mínimo (incluyendo cuotas)
+        precio_minimo = self.calculadora.calcular_precio_para_margen(
             costo, margen_min, categoria_nombre, envio_gratis, cuotas=cuotas
         )
-        precio_con_margen_max = self.calculadora.calcular_precio_para_margen(
+        # Calcular precio con margen máximo
+        precio_maximo = self.calculadora.calcular_precio_para_margen(
             costo, margen_max, categoria_nombre, envio_gratis, cuotas=cuotas
         )
 
-        if not precio_competencia:
-            margen_medio = (margen_min + margen_max) / 2
-            precio_final = self.calculadora.calcular_precio_para_margen(
-                costo, margen_medio, categoria_nombre, envio_gratis, cuotas=cuotas
-            )
-        elif estrategia == "volumen":
-            precio_agresivo = precio_competencia * 0.95
-            precio_final = max(precio_con_margen_min, precio_agresivo)
-        elif estrategia == "margen":
-            precio_final = precio_con_margen_max
-        else:
-            precio_competitivo = precio_competencia * 0.97
-            precio_final = max(precio_con_margen_min, min(precio_competitivo, precio_con_margen_max))
+        if not precio_minimo or not precio_maximo:
+            precio_minimo = costo * 1.3
+            precio_maximo = costo * 1.5
 
+        # Decidir herramienta de marketing
+        margen_medio = (margen_min + margen_max) / 2
+        marketing = self.decidir_estrategia_marketing(
+            precio_competencia, cantidad_competidores, margen_medio, estrategia
+        )
+        costo_marketing_pct = marketing["costo_pct"]
+
+        # Calcular precio objetivo según estrategia
+        if estrategia == "volumen":
+            # Precio más agresivo posible — mínimo margen pero máxima competitividad
+            if precio_competencia:
+                precio_objetivo = precio_competencia * 0.93  # 7% bajo competencia
+            else:
+                precio_objetivo = precio_minimo
+        elif estrategia == "margen":
+            # Maximizar ganancia — usar margen máximo
+            precio_objetivo = precio_maximo
+        else:
+            # Competitivo — 3-5% bajo mediana, ajustado por herramienta
+            if precio_competencia:
+                descuento = 0.03 + costo_marketing_pct
+                precio_objetivo = precio_competencia * (1 - descuento)
+            else:
+                precio_objetivo = (precio_minimo + precio_maximo) / 2
+
+        # Ajustar precio para cubrir el costo de marketing
+        precio_con_marketing = precio_objetivo * (1 + costo_marketing_pct)
+
+        # Respetar el rango mínimo-máximo
+        precio_final = max(precio_minimo, min(precio_con_marketing, precio_maximo))
         precio_final = round(precio_final, 2)
-        calculo = self.calculadora.calcular(precio_final, costo, categoria_nombre, envio_gratis, cuotas=cuotas)
+
+        # Calcular métricas finales
+        calculo = self.calculadora.calcular(
+            precio_final, costo, categoria_nombre, envio_gratis, cuotas=cuotas
+        )
+
         return {
-            "precio": precio_final,
-            "margen_real_pct": calculo["margen_neto_pct"],
-            "ganancia_por_venta": calculo["ganancia_neta"],
-            "desglose": calculo,
+            "precio":               precio_final,
+            "margen_real_pct":      calculo["margen_neto_pct"],
+            "ganancia_por_venta":   calculo["ganancia_neta"],
+            "desglose":             calculo,
+            "marketing":            marketing,
+            "precio_competencia":   precio_competencia,
+            "precio_minimo":        precio_minimo,
+            "precio_maximo":        precio_maximo,
         }
 
     def publicar_producto(self, producto_droppers, config_publicacion):
@@ -393,6 +463,7 @@ class PublicadorML:
                     "ganancia":   precio_info["ganancia_por_venta"],
                     "permalink":  resultado.get("permalink", ""),
                     "score_ia":   listing.get("score_estimado", 0),
+                    "marketing":  precio_info.get("marketing", {}).get("label", ""),
                 }
             else:
                 causas = resultado.get("cause", resultado.get("causes", []))

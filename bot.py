@@ -976,6 +976,22 @@ async function iniciarPublicacion() {
       document.getElementById('pub-errores-lista').innerHTML = err.map(r=>
         `<div style="padding:6px 0;border-bottom:0.5px solid #f0ede8;font-size:11px;color:#A32D2D">⚠️ ${r.titulo||''} — ${r.error||''}</div>`
       ).join('');
+      // Mostrar resumen de marketing
+      const marketingResumen = {};
+      ok.forEach(r => {
+        const m = r.marketing || 'Sin herramienta';
+        marketingResumen[m] = (marketingResumen[m] || 0) + 1;
+      });
+      const marketingHtml = Object.entries(marketingResumen).map(([k,v]) =>
+        `<div style="font-size:11px;color:#666;padding:3px 0">📊 ${k}: <strong>${v} productos</strong></div>`
+      ).join('');
+      if (marketingHtml) {
+        document.getElementById('pub-errores-lista').innerHTML +=
+          `<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid #f0ede8">
+            <p style="font-size:11px;font-weight:600;color:#1a1a1a;margin-bottom:6px">Decisiones de marketing de la IA:</p>
+            ${marketingHtml}
+          </div>`;
+      }
       document.getElementById('pub-prog-eta').textContent = '✅ Finalizado';
     }
   }, 2000);
