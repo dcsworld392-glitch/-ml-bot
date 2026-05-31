@@ -1518,7 +1518,25 @@ def api_mis_publicaciones():
         return jsonify({"error": str(e)})
 
 
+MEJORA_FILE = "/tmp/ml_mejora_resultados.json"
+
 mejora_progreso = {"corriendo": False, "actual": 0, "total": 0, "producto_actual": "", "mejorados": 0, "resultados": []}
+
+def guardar_mejora_progreso():
+    try:
+        with open(MEJORA_FILE, "w") as f:
+            json.dump(mejora_progreso, f)
+    except:
+        pass
+
+def cargar_mejora_progreso():
+    global mejora_progreso
+    try:
+        if os.path.exists(MEJORA_FILE):
+            with open(MEJORA_FILE, "r") as f:
+                mejora_progreso = json.load(f)
+    except:
+        pass
 
 @app.route("/api/reporte-calidad-pdf")
 def api_reporte_calidad_pdf():
@@ -1705,9 +1723,12 @@ def api_mejorar_calidad():
                                 "item_id": item_id,
                                 "titulo": item_data.get("title", "")[:50],
                                 "score_anterior": score,
+                                "mejoras_aplicadas": resultado.get("mejoras_aplicadas", []),
+                                "score_estimado": resultado.get("score_estimado", 80),
                                 "ok": True
                             })
                             log(f"✅ {item_id}: {score}% → mejorado")
+                            guardar_mejora_progreso()
                     else:
                         mejora_progreso["resultados"].append({
                             "item_id": item_id,
@@ -1721,6 +1742,7 @@ def api_mejorar_calidad():
                     log(f"❌ Error en {item_id}: {e}")
             mejora_progreso["corriendo"] = False
             mejora_progreso["producto_actual"] = f"✅ Listo — {mejora_progreso['mejorados']} publicaciones mejoradas"
+            guardar_mejora_progreso()
             log(f"✅ Mejora completada: {mejora_progreso['mejorados']}/{len(item_ids)} mejoradas")
         except Exception as e:
             mejora_progreso["corriendo"] = False
@@ -2070,6 +2092,9 @@ if __name__ == "__main__":
 ║   Dashboard: http://localhost:5000           ║
 ╚══════════════════════════════════════════════╝
     """)
+
+    # Cargar resultados previos de mejora de calidad
+    cargar_mejora_progreso()
 
     # Verificar configuración
     if CONFIG["ML_ACCESS_TOKEN"] == "TU_ACCESS_TOKEN_AQUI":
