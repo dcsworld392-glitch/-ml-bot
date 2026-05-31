@@ -1670,18 +1670,35 @@ async function abrirModalPromo(itemId, titulo, precio) {
   if (!d.ok) { document.getElementById('modal-promo-opciones').innerHTML = `<p style="color:#A32D2D">${d.error}</p>`; return; }
 
   document.getElementById('modal-promo-opciones').innerHTML = d.opciones.map((op, i) => `
-    <div onclick="seleccionarPromo(${i}, ${JSON.stringify(op).replace(/"/g,"'")})"
+    <div onclick="seleccionarPromo(${i}, ${JSON.stringify(op).replace(/"/g,"&quot;")})"
       id="promo-op-${i}"
-      style="border:0.5px solid #e5e3de;border-radius:8px;padding:12px;cursor:pointer;transition:.2s">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+      style="border:0.5px solid #e5e3de;border-radius:8px;padding:12px;cursor:pointer;transition:.2s;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <p style="font-size:12px;font-weight:600;color:#1a1a1a">${op.label}</p>
-        <p style="font-size:13px;font-weight:700;color:#3B6D11">$${op.precio_nuevo.toLocaleString('es-AR')}</p>
+        <div style="text-align:right;flex-shrink:0;margin-left:10px">
+          <p style="font-size:13px;font-weight:700;color:#3B6D11">$${op.precio_nuevo.toLocaleString('es-AR')}</p>
+          <p style="font-size:10px;color:#A32D2D">−${op.descuento_pct}% de descuento</p>
+        </div>
       </div>
-      <p style="font-size:11px;color:#666;margin-top:3px">${op.descripcion}</p>
+      <p style="font-size:11px;color:#666;margin-bottom:6px">${op.descripcion}</p>
+      <div style="display:flex;gap:10px;font-size:10px;flex-wrap:wrap">
+        <span style="color:#666">Precio actual: <strong>$${op.precio_actual.toLocaleString('es-AR')}</strong></span>
+        <span style="color:#666">Precio nuevo: <strong style="color:#3B6D11">$${op.precio_nuevo.toLocaleString('es-AR')}</strong></span>
+        ${op.meli_aporta_pct > 0 ? `<span style="background:#E6F1FB;color:#185FA5;padding:1px 6px;border-radius:4px">ML aporta ${op.meli_aporta_pct}%</span>` : ''}
+        ${op.seller_aporta_pct > 0 ? `<span style="background:#FAEEDA;color:#854F0B;padding:1px 6px;border-radius:4px">Vos aportás ${op.seller_aporta_pct}%</span>` : ''}
+        ${op.status === 'candidate' ? '<span style="background:#EAF3DE;color:#3B6D11;padding:1px 6px;border-radius:4px">✅ Disponible en ML</span>' : ''}
+        ${op.status === 'manual' ? '<span style="background:#F7F6F3;color:#999;padding:1px 6px;border-radius:4px">Descuento manual</span>' : ''}
+      </div>
     </div>`).join('');
 }
 
-function seleccionarPromo(idx, opcion) {
+function seleccionarPromo(idx, opcionJson) {
+  let opcion;
+  if (typeof opcionJson === 'string') {
+    try { opcion = JSON.parse(opcionJson.replace(/&quot;/g, '"')); } catch(e) { return; }
+  } else {
+    opcion = opcionJson;
+  }
   promoOpcionActual = opcion;
   document.querySelectorAll('[id^="promo-op-"]').forEach(el => {
     el.style.background = ''; el.style.borderColor = '#e5e3de';
@@ -2253,36 +2270,98 @@ def api_actualizar_stock(item_id):
 
 @app.route("/api/opciones-promocion/<item_id>")
 def api_opciones_promocion(item_id):
-    """Devuelve las opciones de promoción disponibles para un item."""
+    """Devuelve las opciones de promoción reales de ML para un item."""
     try:
         item = sistema.ml.get(f"/items/{item_id}")
         precio = item.get("price", 0)
-        opciones = [
-            {
-                "tipo": "descuento_5",
-                "label": "Descuento 5%",
-                "precio_nuevo": round(precio * 0.95, 2),
-                "descripcion": "Pequeño descuento para aumentar clics",
-            },
-            {
-                "tipo": "descuento_10",
-                "label": "Descuento 10%",
-                "precio_nuevo": round(precio * 0.90, 2),
-                "descripcion": "Descuento moderado, buen balance ventas/margen",
-            },
-            {
-                "tipo": "descuento_15",
-                "label": "Descuento 15%",
-                "precio_nuevo": round(precio * 0.85, 2),
-                "descripcion": "Descuento agresivo para liquidar stock rápido",
-            },
-            {
-                "tipo": "precio_llamativo",
-                "label": "Precio llamativo",
-                "precio_nuevo": round(precio * 0.97, 2),
-                "descripcion": "3% de descuento para aparecer como oferta en ML",
-            },
-        ]
+
+        # Consultar promociones disponibles reales de ML
+        promos_ml = []
+        try:
+            r = sistema.ml.get(f"/seller-promotions/items/{item_id}", params={"app_version": "v2"})
+            if isinstance(r, list):
+                promos_ml = r
+            elif isinstance(r, dict) and r.get("results"):
+                promos_ml = r["results"]
+        except:
+            pass
+
+        opciones = []
+
+        # Procesar promociones reales de ML
+        tipos_label = {
+            "PRICE_DISCOUNT":        "🏷️ Descuento de precio",
+            "LIGHTNING":             "⚡ Oferta relámpago",
+            "DOD":                   "🌟 Oferta del día",
+            "DEAL":                  "🎯 Campaña tradicional ML",
+            "SELLER_CAMPAIGN":       "📢 Campaña del vendedor",
+            "MARKETPLACE_CAMPAIGN":  "🤝 Campaña co-financiada ML",
+            "VOLUME":                "📦 Descuento por volumen",
+            "SMART":                 "🤖 Campaña inteligente",
+            "PRE_NEGOTIATED":        "💼 Descuento pre-negociado",
+        }
+        tipos_desc = {
+            "PRICE_DISCOUNT":       "ML muestra un tachado del precio original. Aumenta el CTR.",
+            "LIGHTNING":            "Aparece destacada por tiempo limitado. Alta visibilidad.",
+            "DOD":                  "Destacada en la sección de ofertas del día de ML.",
+            "DEAL":                 "Campaña organizada por ML. Máxima visibilidad.",
+            "SELLER_CAMPAIGN":      "Campaña propia del vendedor con descuento configurable.",
+            "MARKETPLACE_CAMPAIGN": "ML co-financia parte del descuento. Menor costo para vos.",
+            "VOLUME":               "Descuento automático al comprar más de X unidades.",
+            "SMART":                "ML elige automáticamente el mejor momento para mostrarla.",
+            "PRE_NEGOTIATED":       "Descuento fijo pre-negociado con ML.",
+        }
+
+        for promo in promos_ml:
+            tipo = promo.get("type", "")
+            status = promo.get("status", "")
+            if status not in ["candidate", "started", "pending", ""]:
+                continue
+
+            precio_min = promo.get("min_discounted_price", precio * 0.7)
+            precio_sugerido = promo.get("suggested_discounted_price") or promo.get("price")
+            precio_nuevo = precio_sugerido or round(precio * 0.9, 2)
+            descuento_pct = round((1 - precio_nuevo / precio) * 100, 1) if precio > 0 else 0
+            meli_pct = promo.get("benefits", {}).get("meli_percent", 0)
+            seller_pct = promo.get("benefits", {}).get("seller_percent", 0)
+
+            opciones.append({
+                "tipo":             tipo,
+                "label":            tipos_label.get(tipo, f"Promoción {tipo}"),
+                "descripcion":      tipos_desc.get(tipo, "Promoción de ML"),
+                "precio_actual":    precio,
+                "precio_nuevo":     precio_nuevo,
+                "precio_minimo":    precio_min,
+                "descuento_pct":    descuento_pct,
+                "meli_aporta_pct":  meli_pct,
+                "seller_aporta_pct": seller_pct,
+                "status":           status,
+                "promo_id":         promo.get("id", ""),
+            })
+
+        # Si ML no devolvió opciones reales, ofrecer descuentos manuales
+        if not opciones:
+            for pct, label, desc in [
+                (5,  "🏷️ Descuento 5%",  "Pequeño descuento para aumentar clics y CTR"),
+                (10, "🏷️ Descuento 10%", "Descuento moderado, buen balance ventas/margen"),
+                (15, "🏷️ Descuento 15%", "Descuento agresivo para liquidar stock"),
+                (3,  "👁️ Precio llamativo", "3% de descuento, aparece como oferta en ML"),
+            ]:
+                precio_nuevo = round(precio * (1 - pct/100), 2)
+                opciones.append({
+                    "tipo":            "PRICE_DISCOUNT",
+                    "label":           label,
+                    "descripcion":     desc,
+                    "precio_actual":   precio,
+                    "precio_nuevo":    precio_nuevo,
+                    "precio_minimo":   precio * 0.5,
+                    "descuento_pct":   pct,
+                    "meli_aporta_pct": 0,
+                    "seller_aporta_pct": pct,
+                    "status":          "manual",
+                    "promo_id":        "",
+                })
+
         return jsonify({"ok": True, "item_id": item_id, "precio_actual": precio, "opciones": opciones})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
