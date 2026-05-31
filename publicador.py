@@ -725,8 +725,14 @@ Generá las mejoras específicas. Devolvé SOLO JSON:
             desc_nueva = mejora.get("descripcion_nueva", "")
             if desc_nueva and mejoras.get("necesita_descripcion"):
                 try:
-                    # Intentar actualizar descripción existente
-                    self.ml.put(f"/items/{item_id}/description", {"plain_text": desc_nueva})
+                    # Verificar si ya tiene descripción
+                    desc_actual = self.ml.get(f"/items/{item_id}/description")
+                    if desc_actual.get("text") or desc_actual.get("plain_text"):
+                        # Ya tiene descripción — actualizar con PUT
+                        self.ml.put(f"/items/{item_id}/description", {"plain_text": desc_nueva})
+                    else:
+                        # No tiene descripción — crear con POST
+                        self.ml.post(f"/items/{item_id}/description", {"plain_text": desc_nueva})
                 except:
                     try:
                         self.ml.post(f"/items/{item_id}/description", {"plain_text": desc_nueva})

@@ -1306,12 +1306,15 @@ async function mejorarCalidad(){
   const btn = event.target;
   btn.disabled = true;
 
-  // Mostrar modal de progreso
-  document.getElementById('modal-mejora').style.display = 'flex';
+  // Mostrar panel lateral sin bloquear
+  const panel = document.getElementById('modal-mejora');
+  panel.style.display = 'block';
   document.getElementById('mejora-barra').style.width = '0%';
+  document.getElementById('mejora-barra').style.background = '#185FA5';
   document.getElementById('mejora-txt').textContent = 'Iniciando...';
   document.getElementById('mejora-producto').textContent = '';
   document.getElementById('mejora-resultado').textContent = '';
+  document.getElementById('btn-descargar-reporte').style.display = 'none';
 
   await fetch('/api/mejorar-calidad', {method:'POST'});
 
@@ -1320,12 +1323,12 @@ async function mejorarCalidad(){
     const d = await r.json();
     const pct = d.total > 0 ? Math.round(d.actual / d.total * 100) : 0;
     document.getElementById('mejora-barra').style.width = pct + '%';
-    document.getElementById('mejora-txt').textContent = `${d.actual}/${d.total} publicaciones revisadas — ${d.mejorados} mejoradas`;
+    document.getElementById('mejora-txt').textContent = `${d.actual}/${d.total} revisadas — ${d.mejorados} mejoradas`;
     document.getElementById('mejora-producto').textContent = d.producto_actual || '';
     if (!d.corriendo && d.actual >= d.total && d.total > 0) {
       clearInterval(iv);
       document.getElementById('mejora-barra').style.background = '#3B6D11';
-      document.getElementById('mejora-resultado').textContent = `✅ ${d.mejorados} publicaciones mejoradas a 75%+`;
+      document.getElementById('mejora-resultado').textContent = `✅ ${d.mejorados} mejoradas a 75%+`;
       document.getElementById('btn-descargar-reporte').style.display = 'block';
       btn.disabled = false;
       btn.textContent = '✨ Mejorar calidad publicaciones';
@@ -1383,20 +1386,21 @@ setInterval(()=>{cargarMetricas();cargarActividad();cargarPendientes();},30000);
 setInterval(verificarToken, 300000);
 </script>
 
-<!-- Modal mejora calidad -->
-<div id="modal-mejora" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div style="background:white;border-radius:12px;padding:24px;width:500px;max-width:90vw">
-    <p style="font-size:14px;font-weight:600;margin-bottom:16px">✨ Mejorando calidad de publicaciones</p>
-    <div style="height:8px;background:#e5e3de;border-radius:4px;overflow:hidden;margin-bottom:10px">
-      <div id="mejora-barra" style="height:100%;background:#185FA5;border-radius:4px;transition:width .5s;width:0%"></div>
-    </div>
-    <p id="mejora-txt" style="font-size:12px;color:#666;margin-bottom:6px">Iniciando...</p>
-    <p id="mejora-producto" style="font-size:12px;color:#185FA5;font-weight:500;margin-bottom:12px;min-height:18px"></p>
-    <p id="mejora-resultado" style="font-size:13px;font-weight:600;color:#3B6D11;min-height:20px"></p>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button onclick="cerrarModalMejora()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cerrar</button>
-      <a id="btn-descargar-reporte" href="/api/reporte-calidad-pdf" target="_blank" style="flex:1;background:#1a1a1a;color:#fff;padding:9px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:none">📄 Descargar reporte PDF</a>
-    </div>
+<!-- Panel lateral mejora calidad -->
+<div id="modal-mejora" style="display:none;position:fixed;bottom:24px;right:24px;width:380px;background:white;border-radius:12px;padding:20px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.15);border:0.5px solid #e5e3de">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <p style="font-size:13px;font-weight:600;color:#1a1a1a">✨ Mejorando calidad</p>
+    <button onclick="cerrarModalMejora()" style="background:none;border:none;color:#999;font-size:16px;cursor:pointer;padding:0;line-height:1">✕</button>
+  </div>
+  <div style="height:6px;background:#e5e3de;border-radius:3px;overflow:hidden;margin-bottom:8px">
+    <div id="mejora-barra" style="height:100%;background:#185FA5;border-radius:3px;transition:width .5s;width:0%"></div>
+  </div>
+  <p id="mejora-txt" style="font-size:11px;color:#666;margin-bottom:4px">Iniciando...</p>
+  <p id="mejora-producto" style="font-size:11px;color:#185FA5;font-weight:500;margin-bottom:8px;min-height:16px;line-height:1.4"></p>
+  <p id="mejora-resultado" style="font-size:12px;font-weight:600;color:#3B6D11;min-height:18px"></p>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button onclick="cerrarModalMejora()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:7px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif">Minimizar</button>
+    <a id="btn-descargar-reporte" href="/api/reporte-calidad-pdf" target="_blank" style="flex:1;background:#1a1a1a;color:#fff;padding:7px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:none">📄 Descargar PDF</a>
   </div>
 </div>
 
