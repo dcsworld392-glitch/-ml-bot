@@ -256,8 +256,94 @@ class PublicadorML:
         """Busca el precio mediano de los competidores (wrapper simple)."""
         return self.buscar_competidores(titulo, categoria_id).get("precio_mediano")
 
-    def decidir_estrategia_marketing(self, precio_comp, cantidad_competidores,
-                                      margen_disponible_pct, estrategia):
+    def decidir_precio_con_ia(self, producto, costo, margen_min, margen_max,
+                               categoria_nombre, envio_gratis, datos_competencia,
+                               estrategia, cuotas):
+        """Usa Claude para decidir el precio óptimo y herramienta de marketing."""
+        try:
+            competidores_txt = ""
+            if datos_competencia.get("competidores"):
+                competidores_txt = "\n".join([
+                    f"- {c['titulo'][:50]}: ${c['precio']:,.0f} ({'envío gratis' if c['envio_gratis'] else 'sin envío gratis'})"
+                    for c in datos_competencia["competidores"][:5]
+                ])
+
+            precio_min_calc = self.calculadora.calcular_precio_para_margen(
+                costo, margen_min, categoria_nombre, envio_gratis, cuotas=cuotas
+            ) or costo * 1.2
+            precio_max_calc = self.calculadora.calcular_precio_para_margen(
+                costo, margen_max, categoria_nombre, envio_gratis, cuotas=cuotas
+            ) or costo * 1.5
+
+            prompt = f"""Sos un experto en pricing para Mercado Libre Argentina. Analizá esta situación y decidí el precio óptimo.
+
+PRODUCTO: {producto.get('titulo', '')}
+COSTO (Droppers): ${costo:,.0f}
+CATEGORÍA: {categoria_nombre}
+ESTRATEGIA ELEGIDA: {estrategia}
+CUOTAS: {cuotas} cuotas sin interés
+ENVÍO GRATIS: {'Sí' if envio_gratis else 'No'}
+
+RANGO DE PRECIO PERMITIDO:
+- Precio mínimo (margen {margen_min}%): ${precio_min_calc:,.0f}
+- Precio máximo (margen {margen_max}%): ${precio_max_calc:,.0f}
+
+COMPETENCIA EN ML:
+- Precio mediano: ${datos_competencia.get('precio_mediano') or 'Sin datos'}
+- Precio mínimo competencia: ${datos_competencia.get('precio_minimo') or 'Sin datos'}
+- Cantidad de vendedores: {datos_competencia.get('cantidad', 0)}
+- Top competidores:
+{competidores_txt or 'Sin competidores encontrados'}
+
+HERRAMIENTAS DE MARKETING DISPONIBLES:
+1. Product Ads (publicidad paga por clic) — reservar 7% del precio para publicidad → mayor visibilidad
+2. Oferta relámpago (descuento temporal) — reducir precio 5% por tiempo limitado → más ventas rápidas
+3. Sin herramienta — precio competitivo directo
+
+Decidí:
+1. El precio exacto dentro del rango permitido
+2. La herramienta de marketing más conveniente
+3. La razón de tu decisión en una línea
+
+Devolvé SOLO JSON:
+{{"precio": 12500, "herramienta": "product_ads", "costo_marketing_pct": 0.07, "razon": "Precio 5% bajo mediana para entrar al mercado con publicidad"}}"""
+
+            import anthropic as _ant
+            client = _ant.Anthropic(api_key=self.generador.client.api_key)
+            msg = client.messages.create(
+                model="claude-sonnet-4-5",
+                max_tokens=300,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            texto = msg.content[0].text.strip()
+            resultado = json.loads(texto[texto.find("{"):texto.rfind("}")+1])
+
+            precio_final = float(resultado.get("precio", precio_min_calc))
+            # Respetar el rango
+            precio_final = max(precio_min_calc, min(precio_final, precio_max_calc))
+            precio_final = round(precio_final, 2)
+
+            calculo = self.calculadora.calcular(
+                precio_final, costo, categoria_nombre, envio_gratis, cuotas=cuotas
+            )
+            return {
+                "precio":             precio_final,
+                "margen_real_pct":    calculo["margen_neto_pct"],
+                "ganancia_por_venta": calculo["ganancia_neta"],
+                "desglose":           calculo,
+                "marketing": {
+                    "herramienta": resultado.get("herramienta", "ninguna"),
+                    "costo_pct":   resultado.get("costo_marketing_pct", 0),
+                    "label":       resultado.get("razon", ""),
+                },
+            }
+        except Exception as e:
+            # Fallback al motor clásico si la IA falla
+            return self.calcular_precio_inteligente(
+                costo, margen_min, margen_max, categoria_nombre,
+                envio_gratis, datos_competencia.get("precio_mediano"),
+                estrategia, cuotas
+            )
         """
         Decide qué herramienta de marketing usar según el contexto.
         Retorna la herramienta elegida y su costo estimado como % del precio.
@@ -386,10 +472,11 @@ class PublicadorML:
             datos_competencia = self.buscar_competidores(titulo_orig, cat_id)
             precio_comp = datos_competencia["precio_mediano"]
 
-            # 4. Calcular precio inteligente con rango de margen y cuotas
-            precio_info = self.calcular_precio_inteligente(
-                costo, margen_min, margen_max, cat_nombre,
-                envio_gratis, precio_comp, estrategia, cuotas
+            # 4. Calcular precio con IA
+            precio_info = self.decidir_precio_con_ia(
+                producto_droppers, costo, margen_min, margen_max,
+                cat_nombre, envio_gratis, datos_competencia,
+                estrategia, cuotas
             )
             precio_final = precio_info["precio"]
 
@@ -468,7 +555,7 @@ class PublicadorML:
                 "available_quantity": 10,
                 "buying_mode":        "buy_it_now",
                 "condition":          "new",
-                "listing_type_id":    "bronze",
+                "listing_type_id":    "gold_special",
                 "pictures":           imagenes,
                 "shipping":           shipping_config,
                 "sale_terms":         sale_terms,
