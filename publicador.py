@@ -228,32 +228,28 @@ class PublicadorML:
                                     envio_gratis, precio_competencia, estrategia):
         """Calcula el precio óptimo según estrategia y rango de margen."""
         precio_con_margen_min = self.calculadora.calcular_precio_para_margen(
-            costo, margen_min, categoria_nombre, envio_gratis
+            costo, margen_min, categoria_nombre, envio_gratis, cuotas=cuotas
         )
         precio_con_margen_max = self.calculadora.calcular_precio_para_margen(
-            costo, margen_max, categoria_nombre, envio_gratis
+            costo, margen_max, categoria_nombre, envio_gratis, cuotas=cuotas
         )
 
         if not precio_competencia:
-            # Sin competencia: usar margen medio
             margen_medio = (margen_min + margen_max) / 2
             precio_final = self.calculadora.calcular_precio_para_margen(
-                costo, margen_medio, categoria_nombre, envio_gratis
+                costo, margen_medio, categoria_nombre, envio_gratis, cuotas=cuotas
             )
         elif estrategia == "volumen":
-            # Máximo 5% bajo competencia, pero nunca bajo el margen mínimo
             precio_agresivo = precio_competencia * 0.95
             precio_final = max(precio_con_margen_min, precio_agresivo)
         elif estrategia == "margen":
-            # Ignorar competencia, usar margen máximo
             precio_final = precio_con_margen_max
         else:
-            # Competitivo: 3% bajo competencia, entre margen_min y margen_max
             precio_competitivo = precio_competencia * 0.97
             precio_final = max(precio_con_margen_min, min(precio_competitivo, precio_con_margen_max))
 
         precio_final = round(precio_final, 2)
-        calculo = self.calculadora.calcular(precio_final, costo, categoria_nombre, envio_gratis)
+        calculo = self.calculadora.calcular(precio_final, costo, categoria_nombre, envio_gratis, cuotas=cuotas)
         return {
             "precio": precio_final,
             "margen_real_pct": calculo["margen_neto_pct"],
@@ -269,6 +265,7 @@ class PublicadorML:
             margen_max   = config_publicacion.get("margen_max", config_publicacion.get("margen_pct", 35))
             estrategia   = config_publicacion.get("estrategia", "competitivo")
             envio_gratis = config_publicacion.get("envio_gratis", False)
+            cuotas       = config_publicacion.get("cuotas", 1)
             costo        = producto_droppers.get("costo", 0) or config_publicacion.get("costo_droppers", 0)
             titulo_orig  = producto_droppers.get("titulo", "")
 
@@ -286,10 +283,10 @@ class PublicadorML:
             # 3. Buscar precio de competencia
             precio_comp = self.buscar_precio_competencia(titulo_orig, cat_id)
 
-            # 4. Calcular precio inteligente con rango de margen
+            # 4. Calcular precio inteligente con rango de margen y cuotas
             precio_info = self.calcular_precio_inteligente(
                 costo, margen_min, margen_max, cat_nombre,
-                envio_gratis, precio_comp, estrategia
+                envio_gratis, precio_comp, estrategia, cuotas
             )
             precio_final = precio_info["precio"]
 
@@ -309,26 +306,27 @@ class PublicadorML:
             if "BRAND" not in ids_presentes:
                 atributos_listing.insert(0, {"id": "BRAND", "value_name": "Genérico"})
 
-            # Agregar EAN solo si es válido (numérico, 8+ dígitos)
-            ean = listing.get("ean", "")
-            if ean and ean.isdigit() and len(ean) >= 8:
-                if "GTIN" not in ids_presentes:
-                    atributos_listing.append({"id": "GTIN", "value_name": ean})
+            # 7. SKU inteligente
+            import re as _re
+            palabras = _re.sub(r'[^a-zA-Z0-9\s]', '', titulo_orig).split()
+            sku = "-".join(p[:4].upper() for p in palabras[:4]) + f"-{str(int(costo))[:4]}"
+            if "SELLER_SKU" not in ids_presentes:
+                atributos_listing.append({"id": "SELLER_SKU", "value_name": sku})
 
-            # Agregar atributos requeridos que falten (solo BRAND y atributos simples)
+            # 8. Agregar atributos requeridos que falten
             ATRIBUTOS_IGNORAR = {"VEHICLE_TYPE", "PRODUCT_TYPE", "AGE_GROUP", "MODEL"}
             for attr_id in atributos_requeridos:
                 if attr_id not in [a.get("id") for a in atributos_listing]:
                     if attr_id not in ATRIBUTOS_IGNORAR:
                         atributos_listing.append({"id": attr_id, "value_name": "No especificado"})
 
-            # 7. Condiciones de venta con garantía
+            # 9. Condiciones de venta con garantía
             sale_terms = [
                 {"id": "WARRANTY_TYPE", "value_name": "Garantía del vendedor"},
                 {"id": "WARRANTY_TIME", "value_name": f"{GARANTIA_DIAS} días"},
             ]
 
-            # 8. Descripción
+            # 10. Descripción
             descripcion = listing.get("descripcion", "")
             if "72" not in descripcion and "hábil" not in descripcion:
                 descripcion += f"\n\nENTREGA: Despachamos dentro de las 72 horas hábiles desde la confirmación del pago."
@@ -336,7 +334,7 @@ class PublicadorML:
             if info_reg and len(info_reg) > 5:
                 descripcion += f"\n\nINFORMACION REGULATORIA: {info_reg}"
 
-            # 9. Subir imágenes a ML
+            # 11. Subir imágenes a ML
             imagenes = []
             for url in producto_droppers.get("imagenes", [])[:6]:
                 if url and url.startswith("http"):
@@ -346,33 +344,41 @@ class PublicadorML:
                     else:
                         imagenes.append({"source": url})
 
-            # 10. Armar cuerpo (SIN description — se sube por endpoint separado)
+            # 12. Configurar envío — fix para que envío gratis funcione
+            if envio_gratis:
+                shipping_config = {
+                    "mode": "me2",
+                    "free_shipping": True,
+                }
+            else:
+                shipping_config = {
+                    "mode": "not_specified",
+                    "free_shipping": False,
+                }
+
+            # 13. Armar cuerpo
             cuerpo = {
                 "title":              listing["titulo"],
                 "category_id":        cat_id,
                 "price":              precio_final,
                 "currency_id":        "ARS",
-                "available_quantity": 1,
+                "available_quantity": 10,
                 "buying_mode":        "buy_it_now",
                 "condition":          "new",
                 "listing_type_id":    "bronze",
                 "pictures":           imagenes,
-                "shipping": {
-                    "mode": "not_specified",
-                    "free_shipping": False,
-                    "logistic_type": "not_specified",
-                },
-                "sale_terms": sale_terms,
-                "attributes":  atributos_listing,
+                "shipping":           shipping_config,
+                "sale_terms":         sale_terms,
+                "attributes":         atributos_listing,
             }
 
-            # 11. Publicar
+            # 14. Publicar
             resultado = self.ml.post("/items", cuerpo)
 
             if resultado.get("id"):
                 item_id = resultado["id"]
 
-                # 12. Subir descripción por endpoint separado (requerido por ML)
+                # 15. Subir descripción por endpoint separado
                 try:
                     self.ml.post(f"/items/{item_id}/description", {"plain_text": descripcion})
                 except:

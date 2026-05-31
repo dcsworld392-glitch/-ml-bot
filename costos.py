@@ -40,7 +40,14 @@ COMISIONES_ML = {
     "default":                         0.145,  # categoría no mapeada
 }
 
-# Costo de envío promedio en ML (Mercado Envíos)
+# Costo de cuotas ML (costo financiero que absorbe el vendedor)
+CUOTAS_ML = {
+    1:  {"costo_pct": 0.000, "label": "1 cuota — sin costo extra"},
+    3:  {"costo_pct": 0.075, "label": "3 cuotas — 7.5% extra"},
+    6:  {"costo_pct": 0.145, "label": "6 cuotas — 14.5% extra"},
+    9:  {"costo_pct": 0.190, "label": "9 cuotas — 19% extra"},
+    12: {"costo_pct": 0.230, "label": "12 cuotas — 23% extra"},
+}
 COSTO_ENVIO_PROMEDIO = {
     "pequeño":  1200,   # hasta 1kg
     "mediano":  2500,   # 1 a 5kg
@@ -63,10 +70,9 @@ IMPUESTOS = {
 class CalculadoraCostos:
 
     def calcular(self, precio_venta, costo_droppers, categoria="default",
-                 envio_gratis=False, tamaño_envio="default"):
+                 envio_gratis=False, tamaño_envio="default", cuotas=1):
         """
         Calcula todos los costos y la ganancia neta real.
-
         Retorna un dict con el desglose completo.
         """
         # 1. Comisión ML
@@ -82,58 +88,60 @@ class CalculadoraCostos:
         # 4. Ingresos Brutos
         iibb = precio_venta * IMPUESTOS["iibb"]
 
-        # 5. Costo de envío (si ofrecés envío gratis lo absorbés vos)
+        # 5. Costo de envío
         costo_envio = COSTO_ENVIO_PROMEDIO.get(tamaño_envio, COSTO_ENVIO_PROMEDIO["default"]) if envio_gratis else 0
 
-        # 6. Total costos
-        total_costos = costo_droppers + comision_ml + iva_comision + percepcion + iibb + costo_envio
+        # 6. Costo de cuotas
+        costo_cuotas_pct = CUOTAS_ML.get(cuotas, CUOTAS_ML[1])["costo_pct"]
+        costo_cuotas = precio_venta * costo_cuotas_pct
 
-        # 7. Ganancia neta
+        # 7. Total costos
+        total_costos = costo_droppers + comision_ml + iva_comision + percepcion + iibb + costo_envio + costo_cuotas
+
+        # 8. Ganancia neta
         ganancia_neta = precio_venta - total_costos
 
-        # 8. Margen neto %
+        # 9. Margen neto %
         margen_neto = (ganancia_neta / precio_venta * 100) if precio_venta > 0 else 0
 
         return {
-            "precio_venta":     round(precio_venta, 2),
-            "costo_droppers":   round(costo_droppers, 2),
-            "comision_ml":      round(comision_ml, 2),
+            "precio_venta":      round(precio_venta, 2),
+            "costo_droppers":    round(costo_droppers, 2),
+            "comision_ml":       round(comision_ml, 2),
             "tasa_comision_pct": round(tasa_comision * 100, 1),
-            "iva_comision":     round(iva_comision, 2),
-            "percepcion_ml":    round(percepcion, 2),
-            "iibb":             round(iibb, 2),
-            "costo_envio":      round(costo_envio, 2),
-            "total_costos":     round(total_costos, 2),
-            "ganancia_neta":    round(ganancia_neta, 2),
-            "margen_neto_pct":  round(margen_neto, 1),
-            "categoria":        categoria,
-            "envio_gratis":     envio_gratis,
+            "iva_comision":      round(iva_comision, 2),
+            "percepcion_ml":     round(percepcion, 2),
+            "iibb":              round(iibb, 2),
+            "costo_envio":       round(costo_envio, 2),
+            "costo_cuotas":      round(costo_cuotas, 2),
+            "cuotas":            cuotas,
+            "total_costos":      round(total_costos, 2),
+            "ganancia_neta":     round(ganancia_neta, 2),
+            "margen_neto_pct":   round(margen_neto, 1),
+            "categoria":         categoria,
+            "envio_gratis":      envio_gratis,
         }
 
     def calcular_precio_para_margen(self, costo_droppers, margen_deseado_pct,
                                      categoria="default", envio_gratis=False,
-                                     tamaño_envio="default"):
-        """
-        Dado un costo y un margen deseado, calcula el precio de venta necesario.
-        Útil para el publicador automático.
-        """
+                                     tamaño_envio="default", cuotas=1):
         tasa_comision = COMISIONES_ML.get(categoria, COMISIONES_ML["default"])
         costo_envio = COSTO_ENVIO_PROMEDIO.get(tamaño_envio, COSTO_ENVIO_PROMEDIO["default"]) if envio_gratis else 0
+        costo_cuotas_pct = CUOTAS_ML.get(cuotas, CUOTAS_ML[1])["costo_pct"]
 
-        # Todos los costos como % del precio de venta (excepto costo_droppers y envio)
         costos_proporcionales = (
             tasa_comision +
             tasa_comision * IMPUESTOS["iva_sobre_comision"] +
             IMPUESTOS["percepcion_ml"] +
-            IMPUESTOS["iibb"]
+            IMPUESTOS["iibb"] +
+            costo_cuotas_pct
         )
 
-        # Precio = (costo_fijo) / (1 - costos_proporcionales - margen_deseado)
         margen_decimal = margen_deseado_pct / 100
         denominador = 1 - costos_proporcionales - margen_decimal
 
         if denominador <= 0:
-            return None  # margen imposible
+            return None
 
         precio = (costo_droppers + costo_envio) / denominador
         return round(precio, 2)

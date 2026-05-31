@@ -281,15 +281,41 @@ class ScraperDroppers:
                     except:
                         pass
 
-            # Imágenes
+            # Imágenes — múltiples selectores para capturar toda la galería
             imagenes = []
-            for img in soup.select(".fotorama__img, .gallery-placeholder img, .product.media img"):
-                src = img.get("src") or img.get("data-src") or ""
-                if src and "placeholder" not in src and src not in imagenes:
-                    src = re.sub(r"/cache/[a-f0-9]{32}/", "/", src)
-                    if src.startswith("/"):
-                        src = BASE + src
-                    imagenes.append(src)
+            selectores_img = [
+                ".fotorama__img",
+                ".gallery-placeholder img",
+                ".product.media img",
+                "img.product-image-photo",
+                ".MagicSlideshow img",
+                "[data-gallery] img",
+                ".owl-item img",
+            ]
+            for selector in selectores_img:
+                for img in soup.select(selector):
+                    src = (img.get("src") or img.get("data-src") or
+                           img.get("data-lazy") or img.get("data-original") or "")
+                    if (src and "placeholder" not in src.lower() and
+                            "logo" not in src.lower() and
+                            "/media/catalog/product/" in src and
+                            src not in imagenes):
+                        src = re.sub(r"/cache/[a-f0-9]{32}/", "/", src)
+                        if src.startswith("/"):
+                            src = BASE + src
+                        imagenes.append(src)
+
+            # Si no encontró imágenes con selectores, buscar todas las imágenes del catálogo
+            if not imagenes:
+                for img in soup.find_all("img"):
+                    src = img.get("src", "")
+                    if "/media/catalog/product/" in src and "placeholder" not in src:
+                        src = re.sub(r"/cache/[a-f0-9]{32}/", "/", src)
+                        if src.startswith("/"):
+                            src = BASE + src
+                        if src not in imagenes:
+                            imagenes.append(src)
+
             imagenes = list(dict.fromkeys(imagenes))[:6]
 
             # Descripción

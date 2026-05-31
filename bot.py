@@ -694,6 +694,12 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
         </div>
       </div>
 
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:500;display:block;margin-bottom:8px">Cuotas sin interés</label>
+        <div id="cuotas-opciones" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        <div id="cuotas-info" style="margin-top:8px;background:#F7F6F3;border-radius:8px;padding:10px 12px;font-size:11px;color:#666"></div>
+      </div>
+
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#F7F6F3;border-radius:8px;margin-bottom:16px;cursor:pointer" onclick="clickEnvio()">
         <div>
           <p style="font-size:12px;font-weight:500;color:#1a1a1a">🚚 Envío gratis</p>
@@ -763,6 +769,55 @@ function toggleEnvio() {
   document.getElementById('pub-envio-thumb').style.transform = pubEnvioActivo ? 'translateX(20px)' : 'translateX(0)';
 }
 
+// Cuotas
+const CUOTAS_INFO = {
+  1:  {costo: 0,    label: '1 cuota',  color: '#3B6D11', bg: '#EAF3DE'},
+  3:  {costo: 7.5,  label: '3 cuotas', color: '#185FA5', bg: '#E6F1FB'},
+  6:  {costo: 14.5, label: '6 cuotas', color: '#854F0B', bg: '#FAEEDA'},
+  9:  {costo: 19.0, label: '9 cuotas', color: '#A32D2D', bg: '#FCEBEB'},
+  12: {costo: 23.0, label: '12 cuotas',color: '#A32D2D', bg: '#FCEBEB'},
+};
+let pubCuotasSeleccionadas = 1;
+
+function inicializarCuotas() {
+  const cont = document.getElementById('cuotas-opciones');
+  if (!cont) return;
+  cont.innerHTML = Object.entries(CUOTAS_INFO).map(([n, info]) => `
+    <button onclick="seleccionarCuotas(${n})" id="btn-cuota-${n}"
+      style="padding:6px 14px;border-radius:8px;border:0.5px solid #e5e3de;background:#F7F6F3;
+             color:#666;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:.2s">
+      ${info.label}
+    </button>`).join('');
+  seleccionarCuotas(1);
+}
+
+function seleccionarCuotas(n) {
+  pubCuotasSeleccionadas = n;
+  Object.keys(CUOTAS_INFO).forEach(k => {
+    const btn = document.getElementById(`btn-cuota-${k}`);
+    if (!btn) return;
+    const info = CUOTAS_INFO[k];
+    if (parseInt(k) === n) {
+      btn.style.background = info.bg;
+      btn.style.color = info.color;
+      btn.style.border = `0.5px solid ${info.color}`;
+      btn.style.fontWeight = '600';
+    } else {
+      btn.style.background = '#F7F6F3';
+      btn.style.color = '#666';
+      btn.style.border = '0.5px solid #e5e3de';
+      btn.style.fontWeight = '500';
+    }
+  });
+  const info = CUOTAS_INFO[n];
+  const infoEl = document.getElementById('cuotas-info');
+  if (infoEl) {
+    infoEl.innerHTML = info.costo === 0
+      ? `<span style="color:#3B6D11">✅ Sin costo extra — el comprador paga todo de una vez</span>`
+      : `<span style="color:#854F0B">⚠️ ML te descuenta el <strong>${info.costo}%</strong> del precio de venta por ofrecer ${n} cuotas sin interés. Esto se suma a los costos del precio final.</span>`;
+  }
+}
+
 function actualizarMargenLabel() {
   const min = document.getElementById('pub-margen-min').value || 15;
   const max = document.getElementById('pub-margen-max').value || 35;
@@ -775,6 +830,7 @@ function togglePublicar() {
   if (p.style.display === 'block') {
     p.scrollIntoView({behavior:'smooth'});
     cargarPubCategorias();
+    inicializarCuotas();
   }
 }
 
@@ -875,6 +931,7 @@ async function iniciarPublicacion() {
     margen_max: margenMax,
     estrategia: estrategia,
     envio_gratis: envio,
+    cuotas: pubCuotasSeleccionadas,
     costo_droppers: 0
   };
   const btn = document.getElementById('btn-pub');
