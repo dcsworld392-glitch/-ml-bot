@@ -74,8 +74,24 @@ class MercadoLibreClient:
     def __init__(self, cfg):
         self.cfg = cfg
         self._ultimo_refresh = datetime.now()
-        # Cargar tokens desde archivo si existe (persiste entre reinicios)
-        self.token = self._cargar_token_guardado() or cfg["ML_ACCESS_TOKEN"]
+        # Siempre arrancar con el token de las variables de entorno (más confiable)
+        # El token de /tmp solo se usa si las env vars están vacías
+        env_token = os.environ.get("ML_ACCESS_TOKEN", "")
+        env_refresh = os.environ.get("ML_REFRESH_TOKEN", "")
+        if env_token and env_token != "TU_ACCESS_TOKEN_AQUI":
+            self.token = env_token
+            if env_refresh:
+                self.cfg["ML_REFRESH_TOKEN"] = env_refresh
+            # Intentar refrescar inmediatamente para obtener token fresco
+            threading.Thread(target=self._refrescar_al_inicio, daemon=True).start()
+        else:
+            self.token = self._cargar_token_guardado() or cfg["ML_ACCESS_TOKEN"]
+
+    def _refrescar_al_inicio(self):
+        """Refresca el token al arrancar para asegurar que está vigente."""
+        import time
+        time.sleep(5)  # Esperar a que Flask arranque
+        self.refrescar_token()
 
     def _cargar_token_guardado(self):
         """Carga el token más reciente guardado en disco."""
