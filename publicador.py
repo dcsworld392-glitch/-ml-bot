@@ -209,20 +209,52 @@ class PublicadorML:
         except:
             return ["BRAND"]
 
-    def buscar_precio_competencia(self, titulo, categoria_id):
-        """Busca el precio mediano de los competidores."""
+    def buscar_competidores(self, titulo, categoria_id):
+        """Busca competidores en ML y retorna datos completos."""
         try:
             r = self.ml.get("/sites/MLA/search", params={
                 "q": titulo[:40], "category": categoria_id,
                 "limit": 10, "sort": "relevance",
             })
-            precios = [i["price"] for i in r.get("results", []) if i.get("price")]
+            resultados = r.get("results", [])
+            if not resultados:
+                return {"precio_mediano": None, "competidores": [], "cantidad": 0}
+
+            competidores = []
+            precios = []
+            for item in resultados:
+                precio = item.get("price", 0)
+                if precio > 0:
+                    precios.append(precio)
+                    competidores.append({
+                        "titulo":    item.get("title", "")[:60],
+                        "precio":    precio,
+                        "vendedor":  item.get("seller", {}).get("nickname", ""),
+                        "imagen":    item.get("thumbnail", ""),
+                        "item_id":   item.get("id", ""),
+                        "permalink": item.get("permalink", ""),
+                        "condicion": item.get("condition", "new"),
+                        "envio_gratis": item.get("shipping", {}).get("free_shipping", False),
+                    })
+
+            precio_mediano = None
             if precios:
                 precios_sorted = sorted(precios)
-                return precios_sorted[len(precios_sorted) // 2]
+                precio_mediano = precios_sorted[len(precios_sorted) // 2]
+
+            return {
+                "precio_mediano": precio_mediano,
+                "precio_minimo":  min(precios) if precios else None,
+                "precio_maximo":  max(precios) if precios else None,
+                "competidores":   competidores[:5],
+                "cantidad":       len(precios),
+            }
         except:
-            pass
-        return None
+            return {"precio_mediano": None, "competidores": [], "cantidad": 0}
+
+    def buscar_precio_competencia(self, titulo, categoria_id):
+        """Busca el precio mediano de los competidores (wrapper simple)."""
+        return self.buscar_competidores(titulo, categoria_id).get("precio_mediano")
 
     def decidir_estrategia_marketing(self, precio_comp, cantidad_competidores,
                                       margen_disponible_pct, estrategia):
@@ -350,8 +382,9 @@ class PublicadorML:
             # 2. Obtener atributos requeridos por la categoría
             atributos_requeridos = self.obtener_atributos_requeridos(cat_id)
 
-            # 3. Buscar precio de competencia
-            precio_comp = self.buscar_precio_competencia(titulo_orig, cat_id)
+            # 3. Buscar competidores completos
+            datos_competencia = self.buscar_competidores(titulo_orig, cat_id)
+            precio_comp = datos_competencia["precio_mediano"]
 
             # 4. Calcular precio inteligente con rango de margen y cuotas
             precio_info = self.calcular_precio_inteligente(
@@ -455,15 +488,28 @@ class PublicadorML:
                     pass
 
                 return {
-                    "ok":         True,
-                    "item_id":    item_id,
-                    "titulo":     listing["titulo"],
-                    "precio":     precio_final,
-                    "margen_pct": precio_info["margen_real_pct"],
-                    "ganancia":   precio_info["ganancia_por_venta"],
-                    "permalink":  resultado.get("permalink", ""),
-                    "score_ia":   listing.get("score_estimado", 0),
-                    "marketing":  precio_info.get("marketing", {}).get("label", ""),
+                    "ok":               True,
+                    "item_id":          item_id,
+                    "titulo":           listing["titulo"],
+                    "precio":           precio_final,
+                    "margen_pct":       precio_info["margen_real_pct"],
+                    "ganancia":         precio_info["ganancia_por_venta"],
+                    "permalink":        resultado.get("permalink", ""),
+                    "score_ia":         listing.get("score_estimado", 0),
+                    "marketing":        precio_info.get("marketing", {}).get("label", ""),
+                    "precio_comp":      precio_comp,
+                    "competidores":     datos_competencia.get("competidores", []),
+                    "cant_competidores": datos_competencia.get("cantidad", 0),
+                    "desglose": {
+                        "costo_droppers":    costo,
+                        "comision_ml":       precio_info["desglose"].get("comision_ml", 0),
+                        "iva_iibb":          precio_info["desglose"].get("iva_comision", 0) + precio_info["desglose"].get("iibb", 0),
+                        "cuotas":            precio_info["desglose"].get("costo_cuotas", 0),
+                        "marketing_costo":   precio_final * precio_info.get("marketing", {}).get("costo_pct", 0),
+                        "ganancia_neta":     precio_info["ganancia_por_venta"],
+                        "margen_pct":        precio_info["margen_real_pct"],
+                        "razon_margen":      f"Competencia ${precio_comp:,.0f}" if precio_comp else "Sin competencia — margen medio",
+                    }
                 }
             else:
                 causas = resultado.get("cause", resultado.get("causes", []))

@@ -727,6 +727,22 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
       </button>
       <p id="btn-pub-hint" style="font-size:11px;color:#999;text-align:center;margin-top:6px">Primero traé el catálogo de Droppers</p>
 
+      <!-- BUSCADOR DE VENDEDORES OPCIONAL -->
+      <div style="margin-top:14px;border-top:0.5px solid #f0ede8;padding-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <p style="font-size:12px;font-weight:500;color:#1a1a1a">🔍 Competir contra un vendedor específico <span style="font-size:10px;color:#999;font-weight:400">(opcional)</span></p>
+          <button onclick="toggleBuscadorVendedor()" id="btn-toggle-vendedor" class="mini-btn">Usar</button>
+        </div>
+        <div id="panel-vendedor" style="display:none">
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <input type="text" id="buscar-vendedor-input" placeholder="Nombre del vendedor en ML (ej: MAXSTORE_AR)" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:8px 12px;color:#1a1a1a;font-size:12px;font-family:'Inter',sans-serif">
+            <button onclick="buscarVendedor()" style="background:#185FA5;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;flex-shrink:0">Buscar</button>
+          </div>
+          <div id="vendedor-resultado" style="display:none;background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:8px;padding:10px 12px;font-size:12px"></div>
+          <p style="font-size:11px;color:#999;margin-top:6px">La IA fijará los precios para competir directamente contra este vendedor.</p>
+        </div>
+      </div>
+
       <div id="pub-progreso" style="display:none;margin-top:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <p style="font-size:12px;font-weight:500">Publicando... <span id="pub-prog-txt">0/0</span></p>
@@ -831,6 +847,51 @@ function actualizarMargenLabel() {
   const min = document.getElementById('pub-margen-min').value || 15;
   const max = document.getElementById('pub-margen-max').value || 35;
   document.getElementById('margen-label').textContent = `${min}% y ${max}%`;
+}
+
+let vendedorObjetivo = null;
+
+function toggleBuscadorVendedor() {
+  const panel = document.getElementById('panel-vendedor');
+  const btn = document.getElementById('btn-toggle-vendedor');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    btn.textContent = 'Cancelar';
+    btn.style.color = '#A32D2D';
+  } else {
+    panel.style.display = 'none';
+    btn.textContent = 'Usar';
+    btn.style.color = '';
+    vendedorObjetivo = null;
+    document.getElementById('vendedor-resultado').style.display = 'none';
+  }
+}
+
+async function buscarVendedor() {
+  const nombre = document.getElementById('buscar-vendedor-input').value.trim();
+  if (!nombre) return;
+  const res = document.getElementById('vendedor-resultado');
+  res.style.display = 'block';
+  res.innerHTML = 'Buscando...';
+  try {
+    const r = await fetch('/api/buscar-vendedor?nickname=' + encodeURIComponent(nombre));
+    const d = await r.json();
+    if (d.error || !d.id) {
+      res.innerHTML = '<span style="color:#A32D2D">No se encontró el vendedor</span>';
+      return;
+    }
+    vendedorObjetivo = d;
+    res.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <div>
+          <p style="font-weight:600;color:#185FA5">${d.nickname}</p>
+          <p style="color:#666;font-size:11px">${d.ventas||0} ventas · Reputación: ${d.reputacion||'N/A'}</p>
+          <p style="color:#3B6D11;font-size:11px;margin-top:3px">✅ La IA competirá contra este vendedor</p>
+        </div>
+      </div>`;
+  } catch(e) {
+    res.innerHTML = '<span style="color:#A32D2D">Error al buscar</span>';
+  }
 }
 
 function togglePublicar() {
@@ -941,6 +1002,7 @@ async function iniciarPublicacion() {
     estrategia: estrategia,
     envio_gratis: envio,
     cuotas: pubCuotasSeleccionadas,
+    vendedor_objetivo: vendedorObjetivo ? vendedorObjetivo.id : null,
     costo_droppers: 0
   };
   const btn = document.getElementById('btn-pub');
@@ -985,22 +1047,39 @@ async function iniciarPublicacion() {
       document.getElementById('pub-errores-lista').innerHTML = err.map(r=>
         `<div style="padding:6px 0;border-bottom:0.5px solid #f0ede8;font-size:11px;color:#A32D2D">⚠️ ${r.titulo||''} — ${r.error||''}</div>`
       ).join('');
-      // Mostrar resumen de marketing
-      const marketingResumen = {};
-      ok.forEach(r => {
-        const m = r.marketing || 'Sin herramienta';
-        marketingResumen[m] = (marketingResumen[m] || 0) + 1;
-      });
-      const marketingHtml = Object.entries(marketingResumen).map(([k,v]) =>
-        `<div style="font-size:11px;color:#666;padding:3px 0">📊 ${k}: <strong>${v} productos</strong></div>`
-      ).join('');
-      if (marketingHtml) {
-        document.getElementById('pub-errores-lista').innerHTML +=
-          `<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid #f0ede8">
-            <p style="font-size:11px;font-weight:600;color:#1a1a1a;margin-bottom:6px">Decisiones de marketing de la IA:</p>
-            ${marketingHtml}
-          </div>`;
-      }
+      // Reporte detallado por producto
+      const detalleHtml = ok.map(r => `
+        <div style="background:#F7F6F3;border-radius:8px;padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <p style="font-size:12px;font-weight:600;color:#1a1a1a;flex:1">${r.titulo||''}</p>
+            <span style="background:#EAF3DE;color:#3B6D11;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;flex-shrink:0;margin-left:8px">${r.margen_pct?.toFixed(1)}% margen</span>
+          </div>
+          <div style="display:flex;gap:12px;font-size:11px;color:#666;margin-bottom:8px">
+            <span>💰 Precio: <strong style="color:#1a1a1a">$${r.precio?.toLocaleString('es-AR')}</strong></span>
+            ${r.precio_comp ? `<span>📊 Competencia: <strong style="color:#185FA5">$${r.precio_comp?.toLocaleString('es-AR')}</strong></span>` : '<span style="color:#999">Sin competencia directa</span>'}
+            <span>📦 ${r.cant_competidores||0} vendedores</span>
+          </div>
+          ${r.desglose ? `<div style="font-size:10px;color:#999;margin-bottom:8px">
+            Costo Droppers $${r.desglose.costo_droppers?.toLocaleString('es-AR')} · Comisión ML $${r.desglose.comision_ml?.toLocaleString('es-AR')} · IVA+IIBB $${r.desglose.iva_iibb?.toLocaleString('es-AR')} · ${r.desglose.razon_margen||''}
+          </div>` : ''}
+          ${r.marketing ? `<div style="font-size:11px;color:#854F0B;margin-bottom:8px">📣 ${r.marketing}</div>` : ''}
+          ${r.competidores && r.competidores.length > 0 ? `
+            <div style="border-top:0.5px solid #e5e3de;padding-top:8px">
+              <p style="font-size:10px;font-weight:600;color:#999;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Competidores encontrados</p>
+              <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">
+                ${r.competidores.map(c => `
+                  <a href="${c.permalink}" target="_blank" style="flex-shrink:0;width:100px;text-decoration:none">
+                    <div style="background:white;border:0.5px solid #e5e3de;border-radius:6px;padding:6px;text-align:center">
+                      <img src="${c.imagen}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;margin-bottom:4px" onerror="this.style.display='none'">
+                      <p style="font-size:10px;color:#1a1a1a;line-height:1.3;margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${c.titulo}</p>
+                      <p style="font-size:11px;font-weight:600;color:#185FA5">$${c.precio?.toLocaleString('es-AR')}</p>
+                      ${c.envio_gratis ? '<p style="font-size:9px;color:#3B6D11">Envío gratis</p>' : ''}
+                    </div>
+                  </a>`).join('')}
+              </div>
+            </div>` : ''}
+        </div>`).join('');
+      document.getElementById('pub-errores-lista').innerHTML += detalleHtml;
       document.getElementById('pub-prog-eta').textContent = '✅ Finalizado';
     }
   }, 2000);
@@ -1173,6 +1252,31 @@ def api_precio_ml():
         })
     except Exception as e:
         return jsonify({"precio_mediano": None, "error": str(e)})
+
+
+@app.route("/api/buscar-vendedor")
+def api_buscar_vendedor():
+    try:
+        nickname = request.args.get("nickname", "").strip()
+        if not nickname:
+            return jsonify({"error": "nickname requerido"})
+        r = sistema.ml.get("/sites/MLA/search", params={"nickname": nickname, "limit": 1})
+        seller_info = r.get("seller", {})
+        if not seller_info:
+            # Buscar por búsqueda de usuarios
+            r2 = sistema.ml.get(f"/users/search", params={"nickname": nickname})
+            resultados = r2.get("results", [])
+            if not resultados:
+                return jsonify({"error": "Vendedor no encontrado"})
+            seller_info = resultados[0]
+        return jsonify({
+            "id":         seller_info.get("id"),
+            "nickname":   seller_info.get("nickname", nickname),
+            "ventas":     seller_info.get("seller_reputation", {}).get("transactions", {}).get("completed", 0),
+            "reputacion": seller_info.get("seller_reputation", {}).get("level_id", "N/A"),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 @app.route("/api/categorias-ml")
