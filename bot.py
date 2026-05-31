@@ -68,23 +68,32 @@ class MercadoLibreClient:
     def __init__(self, cfg):
         self.cfg = cfg
         self.token = cfg["ML_ACCESS_TOKEN"]
+        self._ultimo_refresh = datetime.now()
 
     def headers(self):
+        # Refrescar proactivamente si el token tiene más de 5 horas
+        if (datetime.now() - self._ultimo_refresh).total_seconds() > 18000:
+            self.refrescar_token()
         return {"Authorization": f"Bearer {self.token}"}
 
     def refrescar_token(self):
         """Renueva el access token usando el refresh token."""
+        refresh = self.cfg.get("ML_REFRESH_TOKEN", "")
+        if not refresh:
+            log("⚠️ No hay refresh_token configurado")
+            return
         r = requests.post(f"{self.BASE}/oauth/token", data={
             "grant_type":    "refresh_token",
             "client_id":     self.cfg["ML_CLIENT_ID"],
             "client_secret": self.cfg["ML_CLIENT_SECRET"],
-            "refresh_token": self.cfg["ML_REFRESH_TOKEN"],
+            "refresh_token": refresh,
         })
         if r.status_code == 200:
             data = r.json()
             self.token = data["access_token"]
-            self.cfg["ML_REFRESH_TOKEN"] = data.get("refresh_token", self.cfg["ML_REFRESH_TOKEN"])
-            log("🔑 Token refrescado correctamente")
+            self.cfg["ML_REFRESH_TOKEN"] = data.get("refresh_token", refresh)
+            self._ultimo_refresh = datetime.now()
+            log("🔑 Token ML refrescado automáticamente")
         else:
             log(f"❌ Error al refrescar token: {r.text}")
 
