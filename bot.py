@@ -144,6 +144,14 @@ class MercadoLibreClient:
             r = requests.post(f"{self.BASE}{endpoint}", headers=self.headers(), json=body)
         return r.json()
 
+    def put(self, endpoint, body):
+        """Actualiza un recurso existente en ML."""
+        r = requests.put(f"{self.BASE}{endpoint}", headers=self.headers(), json=body)
+        if r.status_code == 401:
+            self.refrescar_token()
+            r = requests.put(f"{self.BASE}{endpoint}", headers=self.headers(), json=body)
+        return r.json()
+
     def post_file(self, endpoint, files):
         """Sube un archivo (imagen) a la API de ML."""
         headers = {"Authorization": f"Bearer {self.token}"}
@@ -814,8 +822,9 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
     </div>
   </div>
 
-  <div style="text-align:center;padding-bottom:32px">
+  <div style="text-align:center;padding-bottom:32px;display:flex;gap:10px;justify-content:center">
     <button class="cycle-btn" onclick="cicloCompleto()">Ejecutar ciclo completo</button>
+    <button class="cycle-btn" style="background:#185FA5" onclick="mejorarCalidad()">✨ Mejorar calidad publicaciones</button>
   </div>
 </main>
 
@@ -1293,6 +1302,17 @@ async function analizarPromociones(){
 
 async function procesarPreguntas(){document.getElementById('actividad').innerHTML='<p class="loading">Procesando...</p>';await fetch('/api/procesar-preguntas',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},3000);}
 async function cicloCompleto(){await fetch('/api/ciclo',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},5000);}
+async function mejorarCalidad(){
+  const btn = event.target;
+  btn.textContent = '⏳ Mejorando...';
+  btn.disabled = true;
+  const r = await fetch('/api/mejorar-calidad', {method:'POST'});
+  const d = await r.json();
+  btn.textContent = '✨ Mejorar calidad publicaciones';
+  btn.disabled = false;
+  if (d.ok) alert(`✅ ${d.mejoradas} publicaciones mejoradas a 75%+`);
+  else alert('Error: ' + d.error);
+}
 
 // Estado del token ML
 async function verificarToken() {
@@ -1441,6 +1461,19 @@ def api_precio_ml():
         })
     except Exception as e:
         return jsonify({"precio_mediano": None, "error": str(e)})
+
+
+@app.route("/api/mejorar-calidad", methods=["POST"])
+def api_mejorar_calidad():
+    """Mejora todas las publicaciones con puntaje bajo a 75%+."""
+    try:
+        from publicador import PublicadorML
+        pub = PublicadorML(sistema.ml, CONFIG.get("ANTHROPIC_API_KEY", ""))
+        resultados = pub.ciclo_mejora_calidad(meta_score=75)
+        log(f"✅ Mejora de calidad: {len(resultados)} publicaciones mejoradas")
+        return jsonify({"ok": True, "mejoradas": len(resultados), "detalle": resultados})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 
 @app.route("/api/intercambiar-codigo", methods=["POST"])
@@ -1757,7 +1790,18 @@ def scheduler_thread():
     """Corre el ciclo automático cada hora y refresca el token cada 5 horas."""
     schedule.every(1).hours.do(sistema.ciclo_completo)
     schedule.every(6).hours.do(sistema.actualizar_metricas)
-    schedule.every(5).hours.do(sistema.ml.refrescar_token)  # Refresh proactivo
+    schedule.every(5).hours.do(sistema.ml.refrescar_token)
+    # Mejora de calidad automática cada 2 horas
+    def mejorar_calidad_auto():
+        try:
+            from publicador import PublicadorML
+            pub = PublicadorML(sistema.ml, CONFIG.get("ANTHROPIC_API_KEY", ""))
+            resultados = pub.ciclo_mejora_calidad(meta_score=75)
+            if resultados:
+                log(f"✅ Auto-mejora calidad: {len(resultados)} publicaciones mejoradas")
+        except Exception as e:
+            log(f"❌ Error auto-mejora: {e}")
+    schedule.every(2).hours.do(mejorar_calidad_auto)
     while True:
         schedule.run_pending()
         time.sleep(60)

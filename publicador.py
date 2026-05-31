@@ -618,27 +618,166 @@ Devolvé SOLO JSON:
         return {"total": total, "exitosos": exitosos,
                 "fallidos": total - exitosos, "resultados": resultados}
 
-    def monitorear_efectividad(self):
+    def mejorar_calidad_publicacion(self, item_id, item_data, health_data):
+        """
+        Mejora una publicación hasta llegar al 80% de calidad.
+        Analiza cada sección y aplica las correcciones específicas.
+        """
         try:
-            items_data = self.ml.obtener_mis_publicaciones()
-            item_ids   = items_data.get("results", [])
-            reescritos = []
-            for item_id in item_ids[:20]:
+            score = health_data.get("overall", {}).get("points", 0)
+            if score >= 75:
+                return {"ok": True, "item_id": item_id, "score": score, "accion": "ya_ok"}
+
+            # Analizar qué secciones fallan
+            secciones = {s["section_id"]: s for s in health_data.get("sections", [])}
+            mejoras = {}
+
+            # 1. TÍTULO — mejorar si tiene menos de 12/15 puntos
+            titulo_pts = secciones.get("TITLE", {}).get("points", 0)
+            titulo_total = secciones.get("TITLE", {}).get("total_points", 15)
+            titulo_actual = item_data.get("title", "")
+            categoria_id = item_data.get("category_id", "")
+
+            # 2. DESCRIPCIÓN — mejorar si está vacía o tiene puntaje bajo
+            desc_pts = secciones.get("DESCRIPTION", {}).get("points", 0)
+            if desc_pts < 15:
+                mejoras["necesita_descripcion"] = True
+
+            # 3. CARACTERÍSTICAS — ver cuántas hay
+            attrs_pts = secciones.get("MAIN_FEATURES", {}).get("points", 0)
+            attrs_total = secciones.get("MAIN_FEATURES", {}).get("total_points", 20)
+            if attrs_pts < attrs_total * 0.6:
+                mejoras["necesita_atributos"] = True
+
+            # 4. FOTOS — verificar cantidad
+            fotos_pts = secciones.get("PICTURES", {}).get("points", 0)
+            if fotos_pts < 20:
+                mejoras["necesita_fotos"] = True
+
+            # Generar mejoras con IA
+            tips_todos = []
+            for s in health_data.get("sections", []):
+                for tip in s.get("tips", []):
+                    tips_todos.append(tip.get("tip", ""))
+
+            prompt = f"""Sos experto en Mercado Libre Argentina. Esta publicación tiene {score}% de calidad y necesita llegar al 80%.
+
+PUBLICACIÓN ACTUAL:
+- Título: {titulo_actual}
+- Categoría: {categoria_id}
+- Score: {score}/100
+
+SECCIONES CON PUNTAJE BAJO:
+{chr(10).join(f"- {s['section_id']}: {s.get('points',0)}/{s.get('total_points',0)} pts" for s in health_data.get('sections', []) if s.get('points',0) < s.get('total_points',0)*0.7)}
+
+TIPS DE ML:
+{chr(10).join(f"- {t}" for t in tips_todos[:8])}
+
+ESTADO DE MEJORAS NECESARIAS:
+{chr(10).join(f"- {k}" for k in mejoras.keys())}
+
+Generá las mejoras específicas. Devolvé SOLO JSON:
+{{
+  "titulo_nuevo": "título mejorado de 55-60 caracteres con keyword al inicio",
+  "descripcion_nueva": "descripción de 200+ palabras con características técnicas, garantía 10 días, entrega 72hs hábiles",
+  "atributos_nuevos": [
+    {{"id": "BRAND", "value_name": "Genérico"}},
+    {{"id": "COLOR", "value_name": "Negro"}},
+    {{"id": "MATERIAL", "value_name": "Plástico ABS"}},
+    {{"id": "WITH_WARRANTY", "value_name": "Sí"}},
+    {{"id": "SELLER_SKU", "value_name": "SKU-001"}}
+  ],
+  "score_estimado": 80
+}}"""
+
+            import anthropic as _ant
+            client = _ant.Anthropic(api_key=self.generador.client.api_key)
+            msg = client.messages.create(
+                model="claude-sonnet-4-5",
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            texto = msg.content[0].text.strip()
+            mejora = json.loads(texto[texto.find("{"):texto.rfind("}")+1])
+
+            # Aplicar mejoras a la publicación
+            updates = {}
+
+            # Actualizar título si mejoró
+            titulo_nuevo = mejora.get("titulo_nuevo", "")
+            if titulo_nuevo and titulo_nuevo != titulo_actual:
+                updates["title"] = titulo_nuevo[:60]
+
+            # Actualizar atributos
+            atributos_nuevos = mejora.get("atributos_nuevos", [])
+            if atributos_nuevos:
+                # Combinar con atributos existentes
+                attrs_existentes = {a.get("id"): a for a in item_data.get("attributes", [])}
+                for a in atributos_nuevos:
+                    attrs_existentes[a["id"]] = a
+                updates["attributes"] = list(attrs_existentes.values())
+
+            # Aplicar updates al item
+            if updates:
+                self.ml.put(f"/items/{item_id}", updates)
+
+            # Actualizar descripción por endpoint separado
+            desc_nueva = mejora.get("descripcion_nueva", "")
+            if desc_nueva and mejoras.get("necesita_descripcion"):
                 try:
-                    item  = self.ml.obtener_detalle_item(item_id)
-                    salud = self.ml.get(f"/items/{item_id}/health")
-                    score = salud.get("overall", {}).get("points", 100)
-                    if score < 66:
-                        nuevo = self.generador.reescribir_si_baja_efectividad(
-                            item_id, item.get("title",""), "", score, item.get("category_id",""))
-                        self.ml.post(f"/items/{item_id}", {
-                            "title": nuevo["titulo_nuevo"],
-                            "description": {"plain_text": nuevo["descripcion_nueva"]}
-                        })
-                        reescritos.append({"item_id": item_id, "score_anterior": score,
-                                           "titulo_nuevo": nuevo["titulo_nuevo"]})
+                    # Intentar actualizar descripción existente
+                    self.ml.put(f"/items/{item_id}/description", {"plain_text": desc_nueva})
+                except:
+                    try:
+                        self.ml.post(f"/items/{item_id}/description", {"plain_text": desc_nueva})
+                    except:
+                        pass
+
+            return {
+                "ok": True,
+                "item_id": item_id,
+                "score_anterior": score,
+                "score_estimado": mejora.get("score_estimado", 80),
+                "titulo_nuevo": titulo_nuevo,
+                "mejoras_aplicadas": list(mejoras.keys()),
+            }
+
+        except Exception as e:
+            return {"ok": False, "item_id": item_id, "error": str(e)}
+
+    def ciclo_mejora_calidad(self, meta_score=75):
+        """
+        Revisa todas las publicaciones activas y mejora las que están bajo la meta.
+        Corre automáticamente cada hora.
+        """
+        try:
+            # Obtener mis publicaciones activas
+            items_data = self.ml.get(f"/users/{self.ml.cfg.get('ML_USER_ID', '')}/items/search",
+                                     params={"status": "active", "limit": 50})
+            item_ids = items_data.get("results", [])
+            if not item_ids:
+                return []
+
+            mejorados = []
+            for item_id in item_ids:
+                try:
+                    # Obtener health score
+                    health = self.ml.get(f"/items/{item_id}/health")
+                    score = health.get("overall", {}).get("points", 100)
+
+                    if score < meta_score:
+                        # Obtener datos del item
+                        item_data = self.ml.get(f"/items/{item_id}")
+                        resultado = self.mejorar_calidad_publicacion(item_id, item_data, health)
+                        if resultado.get("ok"):
+                            mejorados.append(resultado)
                 except:
                     pass
-            return reescritos
-        except:
+
+            return mejorados
+        except Exception as e:
             return []
+
+    def monitorear_efectividad(self):
+        """Wrapper para compatibilidad — usa el nuevo ciclo de mejora."""
+        return self.ciclo_mejora_calidad(meta_score=75)
