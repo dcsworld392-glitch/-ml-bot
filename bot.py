@@ -1754,6 +1754,8 @@ async function mejorarPublicacionIndividual(itemId, btn) {
     btn.style.opacity = '1';
   }
 }
+
+function filtrarReporte(filtro) {
   document.querySelectorAll('[id^="fil-"]').forEach(b => {
     b.style.background = ''; b.style.color = '';
   });
