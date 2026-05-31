@@ -153,6 +153,31 @@ class PublicadorML:
             pass
         return ""
 
+    def subir_imagen_a_ml(self, url_imagen):
+        """Descarga una imagen y la sube a ML. Retorna el picture_id."""
+        try:
+            import requests as req
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+            r = req.get(url_imagen, timeout=15, headers=headers)
+            if r.status_code != 200:
+                return None
+            # Detectar tipo de imagen
+            content_type = r.headers.get("Content-Type", "image/jpeg")
+            if "png" in content_type:
+                ext = "png"
+            elif "webp" in content_type:
+                ext = "webp"
+            else:
+                ext = "jpg"
+            # Subir a ML Pictures API
+            upload = self.ml.post_file(
+                "/pictures/items/upload",
+                files={"file": (f"imagen.{ext}", r.content, content_type)}
+            )
+            return upload.get("id")
+        except Exception as e:
+            return None
+
     def obtener_atributos_requeridos(self, categoria_id):
         """Obtiene los atributos obligatorios de una categoría."""
         try:
@@ -257,12 +282,16 @@ class PublicadorML:
             if "72" not in descripcion and "hábil" not in descripcion:
                 descripcion += f"\n\n📦 ENTREGA: Despachamos dentro de las 72 horas hábiles desde la confirmación del pago."
 
-            # 9. Filtrar imágenes válidas
-            imagenes = [
-                {"source": url}
-                for url in producto_droppers.get("imagenes", [])[:6]
-                if url and url.startswith("http")
-            ]
+            # 9. Subir imágenes a ML
+            imagenes = []
+            for url in producto_droppers.get("imagenes", [])[:6]:
+                if url and url.startswith("http"):
+                    picture_id = self.subir_imagen_a_ml(url)
+                    if picture_id:
+                        imagenes.append({"id": picture_id})
+                    else:
+                        # Fallback: pasar URL directamente
+                        imagenes.append({"source": url})
 
             # 10. Armar cuerpo
             cuerpo = {

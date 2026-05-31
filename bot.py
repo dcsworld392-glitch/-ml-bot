@@ -102,6 +102,16 @@ class MercadoLibreClient:
             r = requests.post(f"{self.BASE}{endpoint}", headers=self.headers(), json=body)
         return r.json()
 
+    def post_file(self, endpoint, files):
+        """Sube un archivo (imagen) a la API de ML."""
+        headers = {"Authorization": f"Bearer {self.token}"}
+        r = requests.post(f"{self.BASE}{endpoint}", headers=headers, files=files)
+        if r.status_code == 401:
+            self.refrescar_token()
+            headers = {"Authorization": f"Bearer {self.token}"}
+            r = requests.post(f"{self.BASE}{endpoint}", headers=headers, files=files)
+        return r.json()
+
     def obtener_preguntas_sin_responder(self):
         uid = self.cfg["ML_USER_ID"]
         return self.get(f"/questions/search", params={
