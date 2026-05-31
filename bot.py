@@ -1304,14 +1304,36 @@ async function procesarPreguntas(){document.getElementById('actividad').innerHTM
 async function cicloCompleto(){await fetch('/api/ciclo',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},5000);}
 async function mejorarCalidad(){
   const btn = event.target;
-  btn.textContent = '⏳ Mejorando...';
   btn.disabled = true;
-  const r = await fetch('/api/mejorar-calidad', {method:'POST'});
-  const d = await r.json();
-  btn.textContent = '✨ Mejorar calidad publicaciones';
-  btn.disabled = false;
-  if (d.ok) alert(`✅ ${d.mejoradas} publicaciones mejoradas a 75%+`);
-  else alert('Error: ' + d.error);
+
+  // Mostrar modal de progreso
+  document.getElementById('modal-mejora').style.display = 'flex';
+  document.getElementById('mejora-barra').style.width = '0%';
+  document.getElementById('mejora-txt').textContent = 'Iniciando...';
+  document.getElementById('mejora-producto').textContent = '';
+  document.getElementById('mejora-resultado').textContent = '';
+
+  await fetch('/api/mejorar-calidad', {method:'POST'});
+
+  const iv = setInterval(async () => {
+    const r = await fetch('/api/progreso-mejora');
+    const d = await r.json();
+    const pct = d.total > 0 ? Math.round(d.actual / d.total * 100) : 0;
+    document.getElementById('mejora-barra').style.width = pct + '%';
+    document.getElementById('mejora-txt').textContent = `${d.actual}/${d.total} publicaciones revisadas — ${d.mejorados} mejoradas`;
+    document.getElementById('mejora-producto').textContent = d.producto_actual || '';
+    if (!d.corriendo && d.actual >= d.total && d.total > 0) {
+      clearInterval(iv);
+      document.getElementById('mejora-barra').style.background = '#3B6D11';
+      document.getElementById('mejora-resultado').textContent = `✅ ${d.mejorados} publicaciones mejoradas a 75%+`;
+      btn.disabled = false;
+      btn.textContent = '✨ Mejorar calidad publicaciones';
+    }
+  }, 2000);
+}
+
+function cerrarModalMejora() {
+  document.getElementById('modal-mejora').style.display = 'none';
 }
 
 // Estado del token ML
@@ -1359,6 +1381,20 @@ cargarMetricas();cargarActividad();cargarPendientes();verificarToken();
 setInterval(()=>{cargarMetricas();cargarActividad();cargarPendientes();},30000);
 setInterval(verificarToken, 300000);
 </script>
+
+<!-- Modal mejora calidad -->
+<div id="modal-mejora" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:12px;padding:24px;width:500px;max-width:90vw">
+    <p style="font-size:14px;font-weight:600;margin-bottom:16px">✨ Mejorando calidad de publicaciones</p>
+    <div style="height:8px;background:#e5e3de;border-radius:4px;overflow:hidden;margin-bottom:10px">
+      <div id="mejora-barra" style="height:100%;background:#185FA5;border-radius:4px;transition:width .5s;width:0%"></div>
+    </div>
+    <p id="mejora-txt" style="font-size:12px;color:#666;margin-bottom:6px">Iniciando...</p>
+    <p id="mejora-producto" style="font-size:12px;color:#185FA5;font-weight:500;margin-bottom:12px;min-height:18px"></p>
+    <p id="mejora-resultado" style="font-size:13px;font-weight:600;color:#3B6D11;min-height:20px"></p>
+    <button onclick="cerrarModalMejora()" style="margin-top:14px;width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cerrar</button>
+  </div>
+</div>
 
 <!-- Modal token -->
 <div id="modal-token" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
@@ -1474,49 +1510,86 @@ def api_mis_publicaciones():
         return jsonify({"error": str(e)})
 
 
+mejora_progreso = {"corriendo": False, "actual": 0, "total": 0, "producto_actual": "", "mejorados": 0, "resultados": []}
+
+@app.route("/api/progreso-mejora")
+def api_progreso_mejora():
+    return jsonify(mejora_progreso)
+
+
 @app.route("/api/mejorar-calidad", methods=["POST"])
 def api_mejorar_calidad():
     """Mejora todas las publicaciones con puntaje bajo a 75%+."""
-    try:
-        from publicador import PublicadorML
-        pub = PublicadorML(sistema.ml, CONFIG.get("ANTHROPIC_API_KEY", ""))
-        user_id = CONFIG.get("ML_USER_ID", "211711561")
-        items_data = sistema.ml.get(f"/users/{user_id}/items/search",
-                                     params={"status": "active", "limit": 50})
-        item_ids = items_data.get("results", [])
-        log(f"🔍 Revisando calidad de {len(item_ids)} publicaciones...")
-        mejorados = []
-        for item_id in item_ids:
-            try:
-                # Usar /item/ (singular) - endpoint correcto de performance
-                perf = sistema.ml.get(f"/item/{item_id}/performance")
-                score = perf.get("score", 100)
-                log(f"📊 {item_id}: score={score}")
-                if score < 75:
-                    item_data = sistema.ml.get(f"/items/{item_id}")
-                    # Convertir formato /performance al que usa mejorar_calidad_publicacion
-                    health_compat = {
-                        "overall": {"points": score},
-                        "sections": [
-                            {
-                                "section_id": b.get("key", ""),
-                                "points": b.get("score", 0),
-                                "total_points": 100,
-                                "tips": [{"tip": v.get("title", "")} for v in b.get("variables", []) if v.get("status") == "PENDING"]
-                            }
-                            for b in perf.get("buckets", [])
-                        ]
-                    }
-                    resultado = pub.mejorar_calidad_publicacion(item_id, item_data, health_compat)
-                    if resultado.get("ok") and resultado.get("accion") != "ya_ok":
-                        mejorados.append(resultado)
-                        log(f"✅ {item_id}: {score}% → mejorado")
-            except Exception as e:
-                log(f"❌ Error en {item_id}: {e}")
-        log(f"✅ Mejora completada: {len(mejorados)}/{len(item_ids)} mejoradas")
-        return jsonify({"ok": True, "mejoradas": len(mejorados), "total": len(item_ids), "detalle": mejorados})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)})
+    global mejora_progreso
+    if mejora_progreso.get("corriendo"):
+        return jsonify({"ok": False, "error": "Ya hay una mejora en curso"})
+    
+    def correr_mejora():
+        global mejora_progreso
+        try:
+            from publicador import PublicadorML
+            pub = PublicadorML(sistema.ml, CONFIG.get("ANTHROPIC_API_KEY", ""))
+            user_id = CONFIG.get("ML_USER_ID", "211711561")
+            items_data = sistema.ml.get(f"/users/{user_id}/items/search",
+                                         params={"status": "active", "limit": 50})
+            item_ids = items_data.get("results", [])
+            mejora_progreso = {"corriendo": True, "actual": 0, "total": len(item_ids), 
+                               "producto_actual": "", "mejorados": 0, "resultados": []}
+            log(f"🔍 Revisando calidad de {len(item_ids)} publicaciones...")
+            for i, item_id in enumerate(item_ids):
+                try:
+                    mejora_progreso["actual"] = i + 1
+                    mejora_progreso["producto_actual"] = f"Verificando {item_id}..."
+                    perf = sistema.ml.get(f"/item/{item_id}/performance")
+                    score = perf.get("score", 100)
+                    if score < 75:
+                        item_data = sistema.ml.get(f"/items/{item_id}")
+                        titulo = item_data.get("title", item_id)
+                        mejora_progreso["producto_actual"] = f"Mejorando: {titulo[:50]}"
+                        health_compat = {
+                            "overall": {"points": score},
+                            "sections": [
+                                {
+                                    "section_id": b.get("key", ""),
+                                    "points": b.get("score", 0),
+                                    "total_points": 100,
+                                    "tips": [{"tip": v.get("title", "")} for v in b.get("variables", []) if v.get("status") == "PENDING"]
+                                }
+                                for b in perf.get("buckets", [])
+                            ]
+                        }
+                        resultado = pub.mejorar_calidad_publicacion(item_id, item_data, health_compat)
+                        if resultado.get("ok") and resultado.get("accion") != "ya_ok":
+                            mejora_progreso["mejorados"] += 1
+                            mejora_progreso["resultados"].append({
+                                "item_id": item_id,
+                                "titulo": item_data.get("title", "")[:50],
+                                "score_anterior": score,
+                                "ok": True
+                            })
+                            log(f"✅ {item_id}: {score}% → mejorado")
+                    else:
+                        mejora_progreso["resultados"].append({
+                            "item_id": item_id,
+                            "titulo": "",
+                            "score": score,
+                            "ok": True,
+                            "ya_ok": True
+                        })
+                except Exception as e:
+                    mejora_progreso["resultados"].append({"item_id": item_id, "error": str(e), "ok": False})
+                    log(f"❌ Error en {item_id}: {e}")
+            mejora_progreso["corriendo"] = False
+            mejora_progreso["producto_actual"] = f"✅ Listo — {mejora_progreso['mejorados']} publicaciones mejoradas"
+            log(f"✅ Mejora completada: {mejora_progreso['mejorados']}/{len(item_ids)} mejoradas")
+        except Exception as e:
+            mejora_progreso["corriendo"] = False
+            mejora_progreso["producto_actual"] = f"❌ Error: {e}"
+            log(f"❌ Error en mejora: {e}")
+
+    import threading
+    threading.Thread(target=correr_mejora, daemon=True).start()
+    return jsonify({"ok": True, "iniciado": True})
 
 
 @app.route("/api/intercambiar-codigo", methods=["POST"])
