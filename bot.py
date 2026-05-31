@@ -645,6 +645,8 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
       <button class="mini-btn" onclick="togglePublicar()">✕ Cerrar</button>
     </div>
     <div class="panel">
+
+      <!-- PASO 1: Categoría Droppers -->
       <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:12px">Paso 1 — Elegí la categoría de Droppers</p>
       <div class="g2" style="margin-bottom:14px">
         <div>
@@ -662,84 +664,91 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
         <div style="height:5px;background:#B5D4F4;border-radius:3px;overflow:hidden;margin-bottom:6px"><div id="scrape-barra" style="height:100%;background:#185FA5;border-radius:3px;transition:width .5s;width:10%"></div></div>
         <p style="font-size:11px;color:#185FA5" id="scrape-cant">Buscando productos...</p>
       </div>
+
+      <!-- PASO 2: Lista de productos con selección de competidor -->
       <div id="prod-preview" style="display:none;margin-bottom:16px">
-        <p style="font-size:11px;color:#999;margin-bottom:8px">Productos encontrados: <strong id="prod-count" style="color:#185FA5">0</strong></p>
-        <div id="prod-lista" style="max-height:160px;overflow-y:auto;background:#F7F6F3;border-radius:8px;padding:10px;font-size:12px"></div>
-      </div>
-
-      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:12px">Paso 2 — Configurá margen y estrategia de precio</p>
-
-      <div class="g2" style="margin-bottom:10px">
-        <div>
-          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen mínimo (%)</label>
-          <input type="number" id="pub-margen-min" value="15" min="5" max="50" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
-          <p style="font-size:10px;color:#999;margin-top:3px">No publicar por debajo de este margen</p>
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen máximo (%)</label>
-          <input type="number" id="pub-margen-max" value="35" min="10" max="80" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
-          <p style="font-size:10px;color:#999;margin-top:3px">Límite superior de ganancia</p>
-        </div>
-      </div>
-
-      <div id="margen-info" style="background:#F7F6F3;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#666;line-height:1.5">
-        La IA analizará la competencia y elegirá el precio óptimo entre <strong id="margen-label">15% y 35%</strong> para maximizar ventas.
-      </div>
-
-      <div class="g2" style="margin-bottom:14px">
-        <div>
-          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría en ML</label>
-          <select id="pub-categoria" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
-            <option value="">Seleccioná...</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Estrategia de precio</label>
-          <select id="pub-estrategia" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
-            <option value="competitivo">Competitivo (3% bajo competencia)</option>
-            <option value="volumen">Volumen (máximo 5% bajo competencia)</option>
-            <option value="margen">Margen máximo (ignorar competencia)</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:500;display:block;margin-bottom:8px">Cuotas sin interés</label>
-        <div id="cuotas-opciones" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-        <div id="cuotas-info" style="margin-top:8px;background:#F7F6F3;border-radius:8px;padding:10px 12px;font-size:11px;color:#666"></div>
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#F7F6F3;border-radius:8px;margin-bottom:16px;cursor:pointer" onclick="clickEnvio()">
-        <div>
-          <p style="font-size:12px;font-weight:500;color:#1a1a1a">🚚 Envío gratis</p>
-          <p style="font-size:11px;color:#999;margin-top:2px">Aumenta el CTR. El costo se suma al precio automáticamente.</p>
-        </div>
-        <div style="position:relative;width:44px;height:24px;flex-shrink:0">
-          <input type="checkbox" id="pub-envio" style="opacity:0;position:absolute;width:0;height:0">
-          <div id="pub-envio-track" style="position:absolute;inset:0;background:#d1d5db;border-radius:24px;transition:background .2s;cursor:pointer">
-            <div id="pub-envio-thumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;background:white;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <p style="font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.6px">Paso 2 — Revisá y configurá cada producto</p>
+          <div style="display:flex;gap:6px">
+            <button onclick="seleccionarTodos(true)" class="mini-btn">☑ Todos</button>
+            <button onclick="seleccionarTodos(false)" class="mini-btn">☐ Ninguno</button>
+            <button onclick="asignarCompetidorMasivo()" id="btn-comp-masivo" class="mini-btn" style="display:none">🎯 Asignar competidor a seleccionados</button>
           </div>
         </div>
+        <div id="prod-lista" style="max-height:400px;overflow-y:auto;background:#F7F6F3;border-radius:8px;padding:10px;font-size:12px"></div>
       </div>
 
-      <button id="btn-pub" onclick="iniciarPublicacion()" disabled style="width:100%;background:#1a1a1a;color:#fff;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:500;cursor:not-allowed;font-family:'Inter',sans-serif;opacity:.4;transition:opacity .2s">
-        🚀 Publicar catálogo completo con IA
-      </button>
-      <p id="btn-pub-hint" style="font-size:11px;color:#999;text-align:center;margin-top:6px">Primero traé el catálogo de Droppers</p>
-
-      <!-- BUSCADOR DE VENDEDORES OPCIONAL -->
-      <div style="margin-top:14px;border-top:0.5px solid #f0ede8;padding-top:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <p style="font-size:12px;font-weight:500;color:#1a1a1a">🔍 Competir contra un vendedor específico <span style="font-size:10px;color:#999;font-weight:400">(opcional)</span></p>
-          <button onclick="toggleBuscadorVendedor()" id="btn-toggle-vendedor" class="mini-btn">Usar</button>
-        </div>
-        <div id="panel-vendedor" style="display:none">
-          <div style="display:flex;gap:8px;margin-bottom:8px">
-            <input type="text" id="buscar-vendedor-input" placeholder="Nombre del vendedor en ML (ej: MAXSTORE_AR)" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:8px 12px;color:#1a1a1a;font-size:12px;font-family:'Inter',sans-serif">
-            <button onclick="buscarVendedor()" style="background:#185FA5;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;flex-shrink:0">Buscar</button>
+      <!-- PASO 3: Configuración global -->
+      <div id="config-global" style="display:none">
+        <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#999;margin-bottom:12px">Paso 3 — Configuración global</p>
+        <div class="g2" style="margin-bottom:10px">
+          <div>
+            <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen mínimo (%)</label>
+            <input type="number" id="pub-margen-min" value="15" min="5" max="50" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <p style="font-size:10px;color:#999;margin-top:3px">No publicar por debajo de este margen</p>
           </div>
-          <div id="vendedor-resultado" style="display:none;background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:8px;padding:10px 12px;font-size:12px"></div>
-          <p style="font-size:11px;color:#999;margin-top:6px">La IA fijará los precios para competir directamente contra este vendedor.</p>
+          <div>
+            <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen máximo (%)</label>
+            <input type="number" id="pub-margen-max" value="35" min="10" max="80" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <p style="font-size:10px;color:#999;margin-top:3px">Límite superior de ganancia</p>
+          </div>
+        </div>
+        <div id="margen-info" style="background:#F7F6F3;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#666;line-height:1.5">
+          La IA analizará la competencia y elegirá el precio óptimo entre <strong id="margen-label">15% y 35%</strong> para maximizar ventas.
+        </div>
+        <div class="g2" style="margin-bottom:14px">
+          <div>
+            <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría en ML</label>
+            <select id="pub-categoria" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+              <option value="">Seleccioná...</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Estrategia de precio</label>
+            <select id="pub-estrategia" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+              <option value="competitivo">Competitivo (3% bajo competencia)</option>
+              <option value="volumen">Volumen (máximo 5% bajo competencia)</option>
+              <option value="margen">Margen máximo (ignorar competencia)</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;font-weight:500;display:block;margin-bottom:8px">Cuotas sin interés</label>
+          <div id="cuotas-opciones" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+          <div id="cuotas-info" style="margin-top:8px;background:#F7F6F3;border-radius:8px;padding:10px 12px;font-size:11px;color:#666"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#F7F6F3;border-radius:8px;margin-bottom:16px;cursor:pointer" onclick="clickEnvio()">
+          <div>
+            <p style="font-size:12px;font-weight:500;color:#1a1a1a">🚚 Envío gratis</p>
+            <p style="font-size:11px;color:#999;margin-top:2px">Aumenta el CTR. El costo se suma al precio automáticamente.</p>
+          </div>
+          <div style="position:relative;width:44px;height:24px;flex-shrink:0">
+            <input type="checkbox" id="pub-envio" style="opacity:0;position:absolute;width:0;height:0">
+            <div id="pub-envio-track" style="position:absolute;inset:0;background:#d1d5db;border-radius:24px;transition:background .2s;cursor:pointer">
+              <div id="pub-envio-thumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;background:white;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+            </div>
+          </div>
+        </div>
+        <button id="btn-pub" onclick="iniciarPublicacion()" disabled style="width:100%;background:#1a1a1a;color:#fff;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:500;cursor:not-allowed;font-family:'Inter',sans-serif;opacity:.4;transition:opacity .2s">
+          🚀 Publicar catálogo completo con IA
+        </button>
+        <p id="btn-pub-hint" style="font-size:11px;color:#999;text-align:center;margin-top:6px">Primero traé el catálogo de Droppers</p>
+      </div>
+
+      <!-- Modal asignación masiva de competidor -->
+      <div id="modal-comp-masivo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center">
+        <div style="background:white;border-radius:12px;padding:24px;width:480px;max-width:90vw">
+          <p style="font-size:14px;font-weight:600;margin-bottom:12px">🎯 Asignar competidor a productos seleccionados</p>
+          <p style="font-size:12px;color:#666;margin-bottom:12px">Ingresá el nickname del vendedor en ML. La IA va a fijar precios para competir contra él en los productos seleccionados.</p>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input type="text" id="modal-vendedor-input" placeholder="Nickname del vendedor (ej: MAXSTORE_AR)" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:8px 12px;color:#1a1a1a;font-size:12px;font-family:'Inter',sans-serif">
+            <button onclick="buscarVendedorModal()" style="background:#185FA5;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">Buscar</button>
+          </div>
+          <div id="modal-vendedor-resultado" style="margin-bottom:12px;font-size:12px;color:#666"></div>
+          <div style="display:flex;gap:8px">
+            <button onclick="cerrarModalComp()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
+            <button onclick="confirmarCompetidorMasivo()" id="btn-confirmar-comp" disabled style="flex:1;background:#1a1a1a;color:#fff;border:none;padding:8px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;opacity:.4">Asignar a seleccionados</button>
+          </div>
         </div>
       </div>
 
@@ -764,7 +773,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
               <p style="font-size:10px;color:#185FA5;font-weight:500">Margen prom.</p>
             </div>
           </div>
-          <div id="pub-errores-lista" style="max-height:200px;overflow-y:auto"></div>
+          <div id="pub-errores-lista" style="max-height:500px;overflow-y:auto"></div>
         </div>
         <div id="pub-resultados" style="max-height:200px;overflow-y:auto"></div>
       </div>
@@ -780,6 +789,8 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
 let pubCategorias = [];
 let productosDroppers = [];
 let pubEnvioActivo = false;
+let competidoresPorProducto = {};
+let vendedorModalTemp = null;
 
 function clickEnvio() {
   pubEnvioActivo = !pubEnvioActivo;
@@ -929,21 +940,96 @@ async function cargarPubCategorias() {
   } catch(e) {}
 }
 
-function mostrarPreviewProductos() {
-  document.getElementById('prod-count').textContent = productosDroppers.length;
-  document.getElementById('prod-lista').innerHTML = productosDroppers.slice(0,10).map(p =>
-    `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e5e3de">
-      <span style="color:#1a1a1a">${p.titulo.substring(0,45)}</span>
-      <span style="color:${p.costo>0?'#3B6D11':'#A32D2D'};font-weight:500;flex-shrink:0;margin-left:8px">${p.costo > 0 ? '$'+p.costo.toLocaleString('es-AR') : '⚠️ sin precio'}</span>
-    </div>`
-  ).join('') + (productosDroppers.length > 10 ? `<p style="color:#999;font-size:11px;margin-top:6px">... y ${productosDroppers.length-10} más</p>` : '');
+function mostrarListaProductos() {
   document.getElementById('prod-preview').style.display = 'block';
   document.getElementById('scrape-estado').style.display = 'block';
   document.getElementById('scrape-titulo').textContent = `✅ ${productosDroppers.length} productos listos`;
   document.getElementById('scrape-barra').style.width = '100%';
   document.getElementById('scrape-barra').style.background = '#639922';
   document.getElementById('scrape-cant').textContent = `${productosDroppers.filter(p=>p.costo>0).length} con precio · ${productosDroppers.filter(p=>!p.costo).length} sin precio`;
+  const lista = document.getElementById('prod-lista');
+  lista.innerHTML = productosDroppers.map((p, i) => {
+    const comp = competidoresPorProducto[i];
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border-radius:8px;margin-bottom:6px;border:0.5px solid #e5e3de">
+      <input type="checkbox" id="chk-${i}" checked onchange="actualizarSeleccion()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer">
+      ${p.imagenes?.[0]?`<img src="${p.imagenes[0]}" style="width:36px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0" onerror="this.style.display='none'">`:'<div style="width:36px;height:36px;background:#F7F6F3;border-radius:5px;flex-shrink:0"></div>'}
+      <div style="flex:1;min-width:0">
+        <p style="font-size:12px;font-weight:500;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.titulo}</p>
+        <p style="font-size:11px;color:${p.costo>0?'#3B6D11':'#A32D2D'}">${p.costo>0?'$'+p.costo.toLocaleString('es-AR'):'⚠️ sin precio'}</p>
+      </div>
+      <div style="flex-shrink:0">
+        ${comp?`<div style="background:#EAF3DE;border-radius:6px;padding:3px 7px;font-size:10px;color:#3B6D11;text-align:center">🎯 ${comp.nombre}<br><button onclick="quitarCompetidor(${i})" style="background:none;border:none;color:#A32D2D;font-size:10px;cursor:pointer;padding:0;font-family:Inter,sans-serif">✕</button></div>`
+        :`<button onclick="asignarCompetidorProducto(${i})" style="background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:4px 8px;border-radius:6px;font-size:10px;cursor:pointer;font-family:Inter,sans-serif">🎯 Competidor</button>`}
+      </div>
+    </div>`;
+  }).join('');
+  actualizarSeleccion();
 }
+
+function mostrarPreviewProductos() { mostrarListaProductos(); }
+
+function actualizarSeleccion() {
+  const n = productosDroppers.filter((_, i) => document.getElementById(`chk-${i}`)?.checked).length;
+  const btn = document.getElementById('btn-comp-masivo');
+  if (btn) btn.style.display = n > 1 ? 'inline-block' : 'none';
+}
+
+function seleccionarTodos(v) {
+  productosDroppers.forEach((_, i) => { const c = document.getElementById(`chk-${i}`); if(c) c.checked = v; });
+  actualizarSeleccion();
+}
+
+let productoModalIndex = -1;
+function asignarCompetidorProducto(i) {
+  productoModalIndex = i;
+  abrirModalComp();
+}
+
+function asignarCompetidorMasivo() {
+  productoModalIndex = -1;
+  abrirModalComp();
+}
+
+function abrirModalComp() {
+  document.getElementById('modal-comp-masivo').style.display = 'flex';
+  document.getElementById('modal-vendedor-input').value = '';
+  document.getElementById('modal-vendedor-resultado').textContent = '';
+  document.getElementById('btn-confirmar-comp').disabled = true;
+  document.getElementById('btn-confirmar-comp').style.opacity = '.4';
+  vendedorModalTemp = null;
+}
+
+function cerrarModalComp() {
+  document.getElementById('modal-comp-masivo').style.display = 'none';
+}
+
+async function buscarVendedorModal() {
+  const nick = document.getElementById('modal-vendedor-input').value.trim();
+  if (!nick) return;
+  document.getElementById('modal-vendedor-resultado').textContent = 'Buscando...';
+  try {
+    const r = await fetch('/api/buscar-vendedor?nickname=' + encodeURIComponent(nick));
+    const d = await r.json();
+    if (d.error || !d.id) { document.getElementById('modal-vendedor-resultado').innerHTML = '<span style="color:#A32D2D">No encontrado</span>'; return; }
+    vendedorModalTemp = d;
+    document.getElementById('modal-vendedor-resultado').innerHTML = `<span style="color:#3B6D11">✅ ${d.nickname} — ${d.ventas||0} ventas</span>`;
+    document.getElementById('btn-confirmar-comp').disabled = false;
+    document.getElementById('btn-confirmar-comp').style.opacity = '1';
+  } catch(e) { document.getElementById('modal-vendedor-resultado').innerHTML = '<span style="color:#A32D2D">Error</span>'; }
+}
+
+function confirmarCompetidorMasivo() {
+  if (!vendedorModalTemp) return;
+  if (productoModalIndex === -1) {
+    productosDroppers.forEach((_, i) => { if (document.getElementById(`chk-${i}`)?.checked) competidoresPorProducto[i] = {id: vendedorModalTemp.id, nombre: vendedorModalTemp.nickname}; });
+  } else {
+    competidoresPorProducto[productoModalIndex] = {id: vendedorModalTemp.id, nombre: vendedorModalTemp.nickname};
+  }
+  cerrarModalComp();
+  mostrarListaProductos();
+}
+
+function quitarCompetidor(i) { delete competidoresPorProducto[i]; mostrarListaProductos(); }
 
 function habilitarBotonPublicar() {
   const btn = document.getElementById('btn-pub');
@@ -974,7 +1060,10 @@ async function iniciarScrape() {
       clearInterval(iv);
       const r2 = await fetch('/api/productos-scrapeados');
       productosDroppers = await r2.json();
-      mostrarPreviewProductos();
+      competidoresPorProducto = {};
+      mostrarListaProductos();
+      document.getElementById('config-global').style.display = 'block';
+      inicializarCuotas();
       habilitarBotonPublicar();
     }
     if (!d.corriendo && d.productos === 0) {
@@ -985,7 +1074,8 @@ async function iniciarScrape() {
 }
 
 async function iniciarPublicacion() {
-  if (!productosDroppers.length) { alert('Primero traé el catálogo de Droppers'); return; }
+  const seleccionados = productosDroppers.filter((_, i) => document.getElementById(`chk-${i}`)?.checked);
+  if (!seleccionados.length) { alert('Seleccioná al menos un producto'); return; }
   const cat = document.getElementById('pub-categoria').value;
   const catData = pubCategorias.find(c=>c.nombre===cat);
   if (!cat||!catData) { alert('Seleccioná la categoría de ML'); return; }
@@ -993,6 +1083,10 @@ async function iniciarPublicacion() {
   const margenMax = parseFloat(document.getElementById('pub-margen-max').value)||35;
   const estrategia = document.getElementById('pub-estrategia').value;
   const envio = pubEnvioActivo;
+  const productosConConfig = seleccionados.map(p => {
+    const i = productosDroppers.indexOf(p);
+    return {...p, vendedor_objetivo: competidoresPorProducto[i]?.id || null};
+  });
   const config = {
     categoria_nombre: cat,
     categoria_id: catData.id,
@@ -1002,7 +1096,6 @@ async function iniciarPublicacion() {
     estrategia: estrategia,
     envio_gratis: envio,
     cuotas: pubCuotasSeleccionadas,
-    vendedor_objetivo: vendedorObjetivo ? vendedorObjetivo.id : null,
     costo_droppers: 0
   };
   const btn = document.getElementById('btn-pub');
@@ -1011,7 +1104,7 @@ async function iniciarPublicacion() {
   document.getElementById('pub-progreso').style.display = 'block';
   document.getElementById('pub-reporte').style.display = 'none';
   const inicio = Date.now();
-  await fetch('/api/publicar-masivo', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({productos:productosDroppers, config})});
+  await fetch('/api/publicar-masivo', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({productos:productosConConfig, config})});
   const iv = setInterval(async()=>{
     const r = await fetch('/api/progreso-publicacion');
     const p = await r.json();
