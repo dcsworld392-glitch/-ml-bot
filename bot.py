@@ -1604,16 +1604,113 @@ function renderTablaPublicaciones(pubs) {
           style="background:#639922;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
           🏷️ Generar promoción
         </button>` : ''}
+        <button onclick="verEstrategiaIA('${p.item_id}', this)"
+          style="background:#854F0B;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
+          🧠 Estrategia IA
+        </button>
         <button onclick="abrirModalStock('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}',${p.stock})"
           style="background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
           📦 Actualizar stock
         </button>
       </div>
+      <div id="estrategia-${p.item_id}" style="display:none;margin-top:10px"></div>
     </div>`;
   }).join('');
 }
 
-async function mejorarPublicacionIndividual(itemId, btn) {
+async function verEstrategiaIA(itemId, btn) {
+  const panel = document.getElementById(`estrategia-${itemId}`);
+  if (panel.style.display === 'block') {
+    panel.style.display = 'none';
+    btn.textContent = '🧠 Estrategia IA';
+    return;
+  }
+  btn.textContent = '⏳ Analizando...';
+  btn.disabled = true;
+  panel.style.display = 'block';
+  panel.innerHTML = '<p style="font-size:11px;color:#999;padding:8px 0">Analizando mercado y competencia...</p>';
+
+  try {
+    const r = await fetch(`/api/estrategia-marketing/${itemId}`);
+    const d = await r.json();
+    btn.textContent = '🧠 Estrategia IA';
+    btn.disabled = false;
+
+    if (!d.ok) { panel.innerHTML = `<p style="color:#A32D2D;font-size:11px">${d.error}</p>`; return; }
+
+    const e = d.estrategia;
+    const urgColores = {alta:'#FCEBEB', media:'#FAEEDA', baja:'#EAF3DE'};
+    const urgTextos = {alta:'#A32D2D', media:'#854F0B', baja:'#3B6D11'};
+
+    panel.innerHTML = `
+      <div style="background:#F7F6F3;border-radius:8px;padding:14px;border:0.5px solid #e5e3de">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <p style="font-size:12px;font-weight:600;color:#1a1a1a">🧠 Estrategia de marketing — Hoy</p>
+          <span style="background:${urgColores[e.urgencia]};color:${urgTextos[e.urgencia]};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600">
+            Urgencia: ${e.urgencia}
+          </span>
+        </div>
+
+        <p style="font-size:11px;color:#666;margin-bottom:10px;line-height:1.5">${e.situacion}</p>
+
+        <div style="background:white;border-radius:6px;padding:10px 12px;margin-bottom:10px;border:0.5px solid #e5e3de">
+          <p style="font-size:11px;font-weight:600;color:#185FA5;margin-bottom:4px">📌 Recomendación principal</p>
+          <p style="font-size:12px;color:#1a1a1a">${e.recomendacion_principal}</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:white;border-radius:6px;padding:8px 10px;border:0.5px solid #e5e3de">
+            <p style="font-size:10px;color:#999;margin-bottom:2px">Precio sugerido</p>
+            <p style="font-size:14px;font-weight:700;color:#3B6D11">$${e.precio_sugerido?.toLocaleString('es-AR')}</p>
+            <p style="font-size:10px;color:#666">${e.precio_sugerido_razon}</p>
+          </div>
+          <div style="background:white;border-radius:6px;padding:8px 10px;border:0.5px solid #e5e3de">
+            <p style="font-size:10px;color:#999;margin-bottom:2px">Herramienta recomendada</p>
+            <p style="font-size:12px;font-weight:600;color:#1a1a1a">${e.herramienta_recomendada}</p>
+            <p style="font-size:10px;color:#666">${e.herramienta_razon}</p>
+          </div>
+        </div>
+
+        ${d.competidores?.length > 0 ? `
+        <div style="margin-bottom:10px">
+          <p style="font-size:11px;font-weight:600;color:#1a1a1a;margin-bottom:6px">📊 Competencia analizada</p>
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">
+            ${d.competidores.slice(0,4).map(c => `
+              <div style="flex-shrink:0;background:white;border:0.5px solid #e5e3de;border-radius:6px;padding:6px 10px;min-width:120px">
+                <p style="font-size:10px;color:#1a1a1a;margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${c.titulo}</p>
+                <p style="font-size:12px;font-weight:600;color:#185FA5">$${c.precio?.toLocaleString('es-AR')}</p>
+                <p style="font-size:10px;color:${c.envio_gratis?'#3B6D11':'#999'}">${c.envio_gratis?'✅ Envío gratis':'Sin envío'}</p>
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
+
+        <div style="margin-bottom:10px">
+          <p style="font-size:11px;font-weight:600;color:#1a1a1a;margin-bottom:6px">✅ Acciones recomendadas</p>
+          ${(e.acciones_adicionales||[]).map(a => `<p style="font-size:11px;color:#666;padding:3px 0;border-bottom:0.5px solid #f0ede8">→ ${a}</p>`).join('')}
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <p style="font-size:11px;color:#666">📈 Potencial: <strong>${e.potencial_ventas}</strong></p>
+          ${e.descuento_sugerido_pct > 0 ? `
+          <button onclick="abrirModalPromoConDescuento('${itemId}', ${e.descuento_sugerido_pct})"
+            style="background:#639922;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
+            🏷️ Aplicar descuento sugerido (${e.descuento_sugerido_pct}%)
+          </button>` : ''}
+        </div>
+      </div>`;
+  } catch(e) {
+    panel.innerHTML = '<p style="color:#A32D2D;font-size:11px">Error al analizar</p>';
+    btn.textContent = '🧠 Estrategia IA';
+    btn.disabled = false;
+  }
+}
+
+async function abrirModalPromoConDescuento(itemId, pct) {
+  // Abre el modal de promo con el descuento sugerido preseleccionado
+  const item = reportePubDatos.find(p => p.item_id === itemId);
+  if (!item) return;
+  await abrirModalPromo(itemId, item.titulo, item.precio);
+}
   btn.textContent = '⏳ Mejorando...';
   btn.disabled = true;
   btn.style.opacity = '.6';
@@ -2363,6 +2460,125 @@ def api_opciones_promocion(item_id):
                 })
 
         return jsonify({"ok": True, "item_id": item_id, "precio_actual": precio, "opciones": opciones})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/api/estrategia-marketing/<item_id>")
+def api_estrategia_marketing(item_id):
+    """Analiza el mercado y genera la mejor estrategia de marketing para el producto."""
+    try:
+        import anthropic as _ant
+
+        # 1. Datos del item
+        item = sistema.ml.get(f"/items/{item_id}")
+        titulo = item.get("title", "")
+        precio = item.get("price", 0)
+        stock = item.get("available_quantity", 0)
+        visitas = item.get("visits", 0)
+        vendidos = item.get("sold_quantity", 0)
+        cat_id = item.get("category_id", "")
+
+        # 2. Performance/calidad
+        score = 0
+        try:
+            perf = sistema.ml.get(f"/item/{item_id}/performance")
+            score = perf.get("score", 0)
+        except:
+            pass
+
+        # 3. Competencia real de ML
+        competidores = []
+        try:
+            r = sistema.ml.get("/sites/MLA/search", params={
+                "q": titulo[:40], "category": cat_id, "limit": 8, "sort": "relevance"
+            })
+            for c in r.get("results", [])[:5]:
+                competidores.append({
+                    "titulo": c.get("title", "")[:60],
+                    "precio": c.get("price", 0),
+                    "vendidos": c.get("sold_quantity", 0),
+                    "envio_gratis": c.get("shipping", {}).get("free_shipping", False),
+                    "reputacion": c.get("seller", {}).get("reputation", {}).get("level_id", ""),
+                })
+        except:
+            pass
+
+        # 4. Promociones disponibles para este item
+        promos_disponibles = []
+        try:
+            r = sistema.ml.get(f"/seller-promotions/items/{item_id}", params={"app_version": "v2"})
+            if isinstance(r, list):
+                promos_disponibles = [p.get("type") for p in r if p.get("status") in ["candidate", "started"]]
+        except:
+            pass
+
+        # 5. Análisis con Claude
+        comp_txt = "\n".join([
+            f"- {c['titulo']}: ${c['precio']:,.0f} ({'envío gratis' if c['envio_gratis'] else 'sin envío'}) — {c['vendidos']} vendidos"
+            for c in competidores
+        ]) or "Sin datos de competencia"
+
+        precios_comp = [c["precio"] for c in competidores if c["precio"] > 0]
+        precio_min_comp = min(precios_comp) if precios_comp else None
+        precio_max_comp = max(precios_comp) if precios_comp else None
+        precio_mediano_comp = sorted(precios_comp)[len(precios_comp)//2] if precios_comp else None
+
+        prompt = f"""Sos un experto en estrategia de marketing para Mercado Libre Argentina.
+Analizá este producto y generá la MEJOR estrategia de marketing para HOY.
+
+PRODUCTO:
+- Título: {titulo}
+- Precio actual: ${precio:,.0f}
+- Stock: {stock} unidades
+- Visitas: {visitas}
+- Vendidos: {vendidos}
+- Calidad publicación: {score}%
+- Categoría: {cat_id}
+
+ANÁLISIS DE COMPETENCIA:
+{comp_txt}
+
+PRECIOS DE COMPETENCIA:
+- Mínimo: ${precio_min_comp:,.0f if precio_min_comp else 'N/A'}
+- Mediano: ${precio_mediano_comp:,.0f if precio_mediano_comp else 'N/A'}
+- Máximo: ${precio_max_comp:,.0f if precio_max_comp else 'N/A'}
+
+HERRAMIENTAS DISPONIBLES EN ML: {', '.join(promos_disponibles) if promos_disponibles else 'Descuentos manuales'}
+
+Considerando todo esto, generá una estrategia completa. Devolvé SOLO JSON:
+{{
+  "situacion": "análisis en 2 líneas de la situación actual del producto",
+  "recomendacion_principal": "la acción más importante a tomar HOY",
+  "precio_sugerido": {precio},
+  "precio_sugerido_razon": "por qué este precio",
+  "herramienta_recomendada": "PRICE_DISCOUNT|LIGHTNING|ninguna|etc",
+  "herramienta_razon": "por qué esta herramienta",
+  "descuento_sugerido_pct": 0,
+  "acciones_adicionales": ["acción 1", "acción 2", "acción 3"],
+  "urgencia": "alta|media|baja",
+  "potencial_ventas": "estimación de ventas si se aplica la estrategia"
+}}"""
+
+        client = _ant.Anthropic(api_key=CONFIG.get("ANTHROPIC_API_KEY", ""))
+        msg = client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=800,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        texto = msg.content[0].text.strip()
+        estrategia = json.loads(texto[texto.find("{"):texto.rfind("}")+1])
+
+        return jsonify({
+            "ok": True,
+            "item_id": item_id,
+            "titulo": titulo,
+            "precio_actual": precio,
+            "competidores": competidores,
+            "precio_min_comp": precio_min_comp,
+            "precio_mediano_comp": precio_mediano_comp,
+            "estrategia": estrategia,
+        })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
