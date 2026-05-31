@@ -44,6 +44,10 @@ CONFIG = {
     # --- Claude (Anthropic) ---
     "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY", ""),
 
+    # --- GitHub (para historial persistente de reportes) ---
+    "GITHUB_TOKEN": os.environ.get("GITHUB_TOKEN", ""),
+    "GITHUB_REPO":  os.environ.get("GITHUB_REPO", "dcsworld392-glitch/-ml-bot"),
+
     # --- Precios automáticos ---
     # Margen mínimo sobre costo (0.15 = 15%). No baja de esto nunca.
     "MARGEN_MINIMO": 0.15,
@@ -1634,30 +1638,127 @@ def cargar_mejora_progreso():
     except:
         pass
 
-def guardar_reporte_historial(datos_reporte):
-    """Guarda una copia del reporte en el historial."""
+def guardar_reporte_github(datos_reporte):
+    """Guarda el reporte en GitHub para persistencia permanente."""
     try:
+        token = CONFIG.get("GITHUB_TOKEN", "")
+        repo = CONFIG.get("GITHUB_REPO", "dcsworld392-glitch/-ml-bot")
+        if not token:
+            return None
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        archivo = os.path.join(HISTORIAL_DIR, f"reporte_{timestamp}.json")
-        with open(archivo, "w") as f:
-            json.dump({
-                "fecha": datetime.now().isoformat(),
-                "fecha_display": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "total": datos_reporte.get("total", 0),
-                "mejorados": datos_reporte.get("mejorados", 0),
-                "resultados": datos_reporte.get("resultados", []),
-                "archivo": f"reporte_{timestamp}",
-            }, f)
-        return f"reporte_{timestamp}"
-    except:
+        nombre = f"reporte_{timestamp}"
+        contenido = json.dumps({
+            "fecha": datetime.now().isoformat(),
+            "fecha_display": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "total": datos_reporte.get("total", 0),
+            "mejorados": datos_reporte.get("mejorados", 0),
+            "resultados": datos_reporte.get("resultados", []),
+            "archivo": nombre,
+        }, ensure_ascii=False, indent=2)
+
+        import base64
+        contenido_b64 = base64.b64encode(contenido.encode('utf-8')).decode('ascii')
+
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+        }
+        url = f"https://api.github.com/repos/{repo}/contents/reportes/{nombre}.json"
+        payload = {
+            "message": f"Reporte calidad {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+            "content": contenido_b64,
+        }
+        r = requests.put(url, headers=headers, json=payload)
+        if r.status_code in (200, 201):
+            log(f"✅ Reporte guardado en GitHub: {nombre}")
+            return nombre
+        else:
+            log(f"⚠️ Error guardando en GitHub: {r.status_code} {r.text[:200]}")
+            return None
+    except Exception as e:
+        log(f"⚠️ Error GitHub: {e}")
+        return None
+
+
+def listar_reportes_github():
+    """Lista los reportes guardados en GitHub."""
+    try:
+        token = CONFIG.get("GITHUB_TOKEN", "")
+        repo = CONFIG.get("GITHUB_REPO", "dcsworld392-glitch/-ml-bot")
+        if not token:
+            return []
+
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+        url = f"https://api.github.com/repos/{repo}/contents/reportes"
+        r = requests.get(url, headers=headers)
+        if r.status_code != 200:
+            return []
+
+        archivos = r.json()
+        reportes = []
+        for arch in sorted(archivos, key=lambda x: x["name"], reverse=True):
+            if arch["name"].endswith(".json"):
+                nombre = arch["name"].replace(".json", "")
+                # Extraer fecha del nombre (reporte_YYYYMMDD_HHMMSS)
+                partes = nombre.split("_")
+                if len(partes) >= 3:
+                    fecha_str = partes[1]
+                    hora_str = partes[2]
+                    try:
+                        fecha_display = f"{fecha_str[6:8]}/{fecha_str[4:6]}/{fecha_str[:4]} {hora_str[:2]}:{hora_str[2:4]}"
+                    except:
+                        fecha_display = nombre
+                else:
+                    fecha_display = nombre
+                reportes.append({
+                    "id": nombre,
+                    "fecha": fecha_display,
+                    "sha": arch.get("sha", ""),
+                    "download_url": arch.get("download_url", ""),
+                })
+        return reportes
+    except Exception as e:
+        log(f"⚠️ Error listando GitHub: {e}")
+        return []
+
+
+def cargar_reporte_github(nombre):
+    """Carga un reporte específico desde GitHub."""
+    try:
+        token = CONFIG.get("GITHUB_TOKEN", "")
+        repo = CONFIG.get("GITHUB_REPO", "dcsworld392-glitch/-ml-bot")
+        if not token:
+            return None
+
+        import base64
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+        url = f"https://api.github.com/repos/{repo}/contents/reportes/{nombre}.json"
+        r = requests.get(url, headers=headers)
+        if r.status_code != 200:
+            return None
+
+        data = r.json()
+        contenido = base64.b64decode(data["content"]).decode('utf-8')
+        return json.loads(contenido)
+    except Exception as e:
+        log(f"⚠️ Error cargando reporte GitHub: {e}")
         return None
 
 @app.route("/api/historial-reportes")
 def api_historial_reportes():
-    """Lista todos los reportes guardados en el historial."""
+    """Lista todos los reportes guardados en GitHub."""
     try:
-        reportes = []
-        if os.path.exists(HISTORIAL_DIR):
+        reportes = listar_reportes_github()
+        # Si GitHub no tiene nada, buscar en /tmp como fallback
+        if not reportes and os.path.exists(HISTORIAL_DIR):
             for archivo in sorted(os.listdir(HISTORIAL_DIR), reverse=True):
                 if archivo.endswith(".json"):
                     try:
@@ -1688,12 +1789,16 @@ def api_reporte_calidad_pdf(reporte_id=None):
 
         # Cargar datos
         if reporte_id:
-            archivo = os.path.join(HISTORIAL_DIR, f"{reporte_id}.json")
-            if os.path.exists(archivo):
-                with open(archivo) as f:
-                    datos = json.load(f)
-            else:
-                datos = mejora_progreso
+            # Intentar cargar desde GitHub primero
+            datos = cargar_reporte_github(reporte_id)
+            if not datos:
+                # Fallback a /tmp
+                archivo = os.path.join(HISTORIAL_DIR, f"{reporte_id}.json")
+                if os.path.exists(archivo):
+                    with open(archivo) as f:
+                        datos = json.load(f)
+                else:
+                    datos = mejora_progreso
         else:
             datos = mejora_progreso
 
@@ -1917,11 +2022,18 @@ def api_mejorar_calidad():
             mejora_progreso["corriendo"] = False
             mejora_progreso["producto_actual"] = f"✅ Listo — {mejora_progreso['mejorados']} publicaciones mejoradas"
             guardar_mejora_progreso()
-            # Guardar en historial
-            archivo_id = guardar_reporte_historial(mejora_progreso)
-            if archivo_id:
-                mejora_progreso["ultimo_reporte"] = archivo_id
-                guardar_mejora_progreso()
+            # Guardar en GitHub (persistente) y en /tmp como backup
+            archivo_id = guardar_reporte_github(mejora_progreso)
+            if not archivo_id:
+                # Fallback a /tmp si GitHub falla
+                archivo_id = f"reporte_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                try:
+                    with open(os.path.join(HISTORIAL_DIR, f"{archivo_id}.json"), "w") as f:
+                        json.dump(mejora_progreso, f)
+                except:
+                    pass
+            mejora_progreso["ultimo_reporte"] = archivo_id
+            guardar_mejora_progreso()
             log(f"✅ Mejora completada: {mejora_progreso['mejorados']}/{len(item_ids)} mejoradas")
         except Exception as e:
             mejora_progreso["corriendo"] = False
