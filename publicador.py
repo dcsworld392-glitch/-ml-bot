@@ -71,45 +71,60 @@ class GeneradorListings:
         attrs_str = ", ".join(atributos_requeridos) if atributos_requeridos else "BRAND"
         descripcion_droppers = producto.get("descripcion", "")
 
-        prompt = f"""Sos un experto en SEO y ventas de Mercado Libre Argentina.
+        prompt = f"""Sos un experto certificado en el algoritmo de Mercado Libre Argentina. Tu misión es crear publicaciones que alcancen el 80%+ de calidad según el sistema de puntuación de ML.
 
-PRODUCTO:
-- Título: {producto.get('titulo', '')}
-- Descripción original de Droppers: {descripcion_droppers[:800] if descripcion_droppers else 'No disponible'}
+ALGORITMO DE PUNTUACIÓN DE ML (conocelo de memoria):
+- Fotos: 25 pts → necesita mínimo 4 fotos
+- Descripción: 20 pts → mínimo 150 palabras, keywords naturales, sin mayúsculas excesivas
+- Características principales: 20 pts → mínimo 4 atributos técnicos completos y precisos
+- Título: 15 pts → 60 chars exactos, keyword principal al inicio, sin puntuación
+- Código universal: 10 pts → GTIN/EAN válido
+- Garantía: 5 pts → ya configurada
+- Tiempo disponibilidad: 5 pts → ya configurado
+
+PRODUCTO A OPTIMIZAR:
+- Título original: {producto.get('titulo', '')}
+- Descripción de Droppers: {descripcion_droppers[:1000] if descripcion_droppers else 'No disponible'}
 - Categoría ML: {categoria_ml}
-- Envío gratis: {"Sí" if envio_gratis else "No — entrega acordada con vendedor"}
-- Keywords: {', '.join(keywords)}
-{f"- Precio competencia: ${precio_competencia:,.0f}" if precio_competencia else ""}
+- Atributos requeridos por ML: {attrs_str}
+- Keywords más buscadas: {', '.join(keywords)}
+- Envío gratis: {"Sí" if envio_gratis else "No — acordado con vendedor"}
+{f"- Precio competencia referencia: ${precio_competencia:,.0f}" if precio_competencia else ""}
 
-CONDICIONES FIJAS:
-- Garantía: {GARANTIA_DIAS} días del vendedor
-- Entrega: 72 horas hábiles desde confirmación de pago
-- Estado: nuevo
+CONDICIONES FIJAS DE LA TIENDA:
+- Garantía del vendedor: {GARANTIA_DIAS} días
+- Entrega: 72 horas hábiles desde confirmación de pago (3 días hábiles)
+- Condición: Nuevo
+- Dropshipping: el producto se envía directo desde el proveedor
 
-ATRIBUTOS REQUERIDOS POR ML: {attrs_str}
+INSTRUCCIONES CRÍTICAS PARA MÁXIMA CALIDAD:
+1. TÍTULO: exactamente 55-60 caracteres. Formato: [Producto] [Característica principal] [Material/Color] [Uso]. Keyword más buscada al inicio. Sin signos de puntuación. Sin palabras en mayúsculas innecesarias.
+2. DESCRIPCIÓN: mínimo 200 palabras. Estructura: párrafo de beneficios (50 palabras) + características técnicas detalladas (80 palabras) + instrucciones de uso (40 palabras) + garantía y entrega (30 palabras). Usar saltos de línea. Incluir keywords de forma natural.
+3. ATRIBUTOS: completar MÍNIMO 6 atributos con valores reales y precisos. Para cada atributo requerido en {attrs_str} dar un valor específico, no genérico. Si no sabés el valor exacto, estimá uno razonable basándote en el producto.
+4. CARACTERÍSTICAS: incluir material, dimensiones aproximadas, color, peso estimado, uso principal, compatibilidad si aplica.
 
-REGLAS:
-1. TÍTULO: máximo 60 caracteres, sin puntuación innecesaria
-2. DESCRIPCIÓN: 150-250 palabras. Basarte en la descripción original de Droppers si existe. Incluir garantía de {GARANTIA_DIAS} días y entrega en 72 horas hábiles
-3. Para categorías de juguetes o productos infantiles, incluir información regulatoria (edad mínima, advertencias de seguridad, normas IRAM si aplica)
-4. EAN: si el producto tiene código de barras conocido usarlo, sino usar "does_not_apply"
-5. Completar TODOS los atributos requeridos
-
-Devolvé SOLO JSON (sin texto adicional ni ```json):
+Devolvé SOLO JSON válido (sin markdown, sin texto extra):
 {{
-  "titulo": "título de hasta 60 caracteres",
-  "descripcion": "descripción completa 150-250 palabras basada en descripción original",
-  "ean": "does_not_apply",
-  "informacion_regulatoria": "Completar solo si aplica para la categoría (ej juguetes: edad mínima 3 años, apto IRAM). Vacío si no aplica.",
+  "titulo": "título de 55-60 caracteres exactos con keyword al inicio",
+  "descripcion": "descripción de mínimo 200 palabras con estructura y keywords",
   "atributos": [
-    {{"id": "BRAND", "value_name": "Genérico"}}
+    {{"id": "BRAND", "value_name": "Genérico"}},
+    {{"id": "MODEL", "value_name": "modelo o referencia del producto"}},
+    {{"id": "COLOR", "value_name": "color principal"}},
+    {{"id": "MATERIAL", "value_name": "material principal"}},
+    {{"id": "WITH_WARRANTY", "value_name": "Sí"}},
+    {{"id": "PACKAGE_LENGTH", "value_name": "estimado en cm"}},
+    {{"id": "PACKAGE_HEIGHT", "value_name": "estimado en cm"}},
+    {{"id": "PACKAGE_WIDTH", "value_name": "estimado en cm"}},
+    {{"id": "PACKAGE_WEIGHT", "value_name": "estimado en gramos"}}
   ],
-  "score_estimado": 80
+  "informacion_regulatoria": "solo si aplica (juguetes: edad mínima X años, norma IRAM XXXX)",
+  "score_estimado": 85
 }}"""
 
         msg = self.client.messages.create(
             model="claude-sonnet-4-5",
-            max_tokens=1200,
+            max_tokens=1500,
             messages=[{"role": "user", "content": prompt}]
         )
         texto = msg.content[0].text.strip()
@@ -342,9 +357,13 @@ class PublicadorML:
                 "condition":          "new",
                 "listing_type_id":    "bronze",
                 "pictures":           imagenes,
-                "shipping":           {"mode": "not_specified", "free_shipping": False},
-                "sale_terms":         sale_terms,
-                "attributes":         atributos_listing,
+                "shipping": {
+                    "mode": "not_specified",
+                    "free_shipping": False,
+                    "logistic_type": "not_specified",
+                },
+                "sale_terms": sale_terms,
+                "attributes":  atributos_listing,
             }
 
             # 11. Publicar
