@@ -1729,7 +1729,7 @@ def api_reporte_calidad_pdf(reporte_id=None):
         story = []
 
         # Encabezado
-        story.append(Paragraph("Simple's — Reporte de Calidad", estilo_titulo))
+        story.append(Paragraph("Simple's - Reporte de Calidad", estilo_titulo))
         fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
         story.append(Paragraph(f"Generado el {fecha}", estilo_subtitulo))
         story.append(HRFlowable(width="100%", thickness=1, color=HexColor('#e5e3de')))
@@ -1767,14 +1767,15 @@ def api_reporte_calidad_pdf(reporte_id=None):
         if ok_list:
             story.append(Paragraph("Publicaciones mejoradas", estilo_h2))
             for i, r in enumerate(ok_list, 1):
-                story.append(Paragraph(f"{i}. {r.get('titulo', r.get('item_id', ''))}", estilo_body))
+                titulo = r.get('titulo', r.get('item_id', '')).encode('ascii', 'replace').decode('ascii')
+                story.append(Paragraph(f"{i}. {titulo}", estilo_body))
                 score_ant = r.get("score_anterior", "?")
                 score_est = r.get("score_estimado", 80)
-                story.append(Paragraph(f"   Score anterior: {score_ant}% → Score estimado: {score_est}%", estilo_verde))
+                story.append(Paragraph(f"   Score anterior: {score_ant}% - Score estimado: {score_est}%", estilo_verde))
                 mejoras = r.get("mejoras_aplicadas", [])
                 if mejoras:
                     mejoras_txt = ", ".join(mejoras)
-                    story.append(Paragraph(f"   Mejoras aplicadas: {mejoras_txt}", estilo_gris))
+                    story.append(Paragraph(f"   Mejoras: {mejoras_txt}", estilo_gris))
                 story.append(Spacer(1, 0.2*cm))
 
         # Publicaciones con errores
@@ -1802,7 +1803,7 @@ def api_reporte_calidad_pdf(reporte_id=None):
         # Pie de página
         story.append(Spacer(1, 1*cm))
         story.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#e5e3de')))
-        story.append(Paragraph("Simple's — Sistema de automatización para Mercado Libre", estilo_gris))
+        story.append(Paragraph("Simple's - Sistema de automatizacion para Mercado Libre", estilo_gris))
 
         doc.build(story)
         buffer.seek(0)
