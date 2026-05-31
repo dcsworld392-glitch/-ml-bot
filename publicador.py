@@ -314,7 +314,7 @@ class PublicadorML:
                 "available_quantity": 1,
                 "buying_mode":        "buy_it_now",
                 "condition":          "new",
-                "listing_type_id":    "free",
+                "listing_type_id":    "bronze",
                 "description":        {"plain_text": descripcion},
                 "pictures":           imagenes,
                 "shipping":           {"mode": "not_specified", "free_shipping": False},
