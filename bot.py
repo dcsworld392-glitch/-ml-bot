@@ -62,13 +62,45 @@ CONFIG = {
 #  BASE: Cliente de Mercado Libre
 # =============================================================
 
+TOKEN_FILE = "/tmp/ml_tokens.json"
+
 class MercadoLibreClient:
     BASE = "https://api.mercadolibre.com"
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.token = cfg["ML_ACCESS_TOKEN"]
         self._ultimo_refresh = datetime.now()
+        # Cargar tokens desde archivo si existe (persiste entre reinicios)
+        self.token = self._cargar_token_guardado() or cfg["ML_ACCESS_TOKEN"]
+
+    def _cargar_token_guardado(self):
+        """Carga el token más reciente guardado en disco."""
+        try:
+            if os.path.exists(TOKEN_FILE):
+                with open(TOKEN_FILE, "r") as f:
+                    data = json.load(f)
+                # Actualizar refresh token en config también
+                if data.get("refresh_token"):
+                    self.cfg["ML_REFRESH_TOKEN"] = data["refresh_token"]
+                guardado_hace = (datetime.now() - datetime.fromisoformat(data.get("guardado_en", "2000-01-01"))).total_seconds()
+                if guardado_hace < 20000:  # menos de 5.5 horas
+                    log(f"🔑 Token cargado desde disco (guardado hace {int(guardado_hace/3600)}h {int((guardado_hace%3600)/60)}m)")
+                    return data.get("access_token")
+        except:
+            pass
+        return None
+
+    def _guardar_token(self):
+        """Guarda el token actual en disco para persistir entre reinicios."""
+        try:
+            with open(TOKEN_FILE, "w") as f:
+                json.dump({
+                    "access_token":  self.token,
+                    "refresh_token": self.cfg.get("ML_REFRESH_TOKEN", ""),
+                    "guardado_en":   datetime.now().isoformat(),
+                }, f)
+        except Exception as e:
+            log(f"⚠️ No se pudo guardar token: {e}")
 
     def headers(self):
         # Refrescar proactivamente si el token tiene más de 5 horas
@@ -77,7 +109,7 @@ class MercadoLibreClient:
         return {"Authorization": f"Bearer {self.token}"}
 
     def refrescar_token(self):
-        """Renueva el access token usando el refresh token."""
+        """Renueva el access token usando el refresh token y lo guarda en disco."""
         refresh = self.cfg.get("ML_REFRESH_TOKEN", "")
         if not refresh:
             log("⚠️ No hay refresh_token configurado")
@@ -93,7 +125,8 @@ class MercadoLibreClient:
             self.token = data["access_token"]
             self.cfg["ML_REFRESH_TOKEN"] = data.get("refresh_token", refresh)
             self._ultimo_refresh = datetime.now()
-            log("🔑 Token ML refrescado automáticamente")
+            self._guardar_token()  # Persistir en disco
+            log("🔑 Token ML refrescado y guardado automáticamente")
         else:
             log(f"❌ Error al refrescar token: {r.text}")
 
@@ -572,6 +605,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px}
   </div>
   <div class="hdr-right">
     <span class="pill pill-green">● Bot activo</span>
+    <span id="token-estado" class="pill" style="background:#EAF3DE;color:#3B6D11;border:0.5px solid #C0DD97;cursor:pointer" onclick="verEstadoToken()" title="Estado del token ML">🔑 Token OK</span>
     <a href="#" onclick="togglePublicar()" class="pill pill-blue">📦 Publicar productos</a>
     <span class="pill pill-time" id="last-update">Cargando...</span>
   </div>
@@ -1260,9 +1294,71 @@ async function analizarPromociones(){
 async function procesarPreguntas(){document.getElementById('actividad').innerHTML='<p class="loading">Procesando...</p>';await fetch('/api/procesar-preguntas',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},3000);}
 async function cicloCompleto(){await fetch('/api/ciclo',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},5000);}
 
-cargarMetricas();cargarActividad();cargarPendientes();
+// Estado del token ML
+async function verificarToken() {
+  try {
+    const r = await fetch('/api/estado-token');
+    const d = await r.json();
+    const el = document.getElementById('token-estado');
+    if (!el) return;
+    if (d.estado === 'expirado' || d.expira_en_horas <= 0) {
+      el.textContent = '⚠️ Token expirado';
+      el.style.background = '#FCEBEB'; el.style.color = '#A32D2D'; el.style.borderColor = '#F5AAAA';
+    } else if (d.expira_en_horas <= 1) {
+      el.textContent = `⏰ Expira en ${d.expira_en_horas}h`;
+      el.style.background = '#FAEEDA'; el.style.color = '#854F0B'; el.style.borderColor = '#FAC775';
+    } else {
+      el.textContent = `🔑 Token OK`;
+      el.style.background = '#EAF3DE'; el.style.color = '#3B6D11'; el.style.borderColor = '#C0DD97';
+    }
+  } catch(e) {}
+}
+
+function verEstadoToken() { document.getElementById('modal-token').style.display='flex'; }
+function cerrarModalToken() { document.getElementById('modal-token').style.display='none'; }
+
+async function actualizarTokenManual() {
+  const code = document.getElementById('token-code-input').value.trim();
+  if (!code) { alert('Pegá el código TG-...'); return; }
+  const btn = document.getElementById('btn-actualizar-token');
+  btn.textContent = 'Procesando...'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/intercambiar-codigo', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({code})});
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('token-result').innerHTML = '<span style="color:#3B6D11">✅ Token actualizado</span>';
+      setTimeout(() => { cerrarModalToken(); verificarToken(); }, 2000);
+    } else {
+      document.getElementById('token-result').innerHTML = `<span style="color:#A32D2D">❌ ${d.error}</span>`;
+    }
+  } catch(e) { document.getElementById('token-result').innerHTML = '<span style="color:#A32D2D">❌ Error</span>'; }
+  btn.textContent = 'Actualizar token'; btn.disabled = false;
+}
+
+cargarMetricas();cargarActividad();cargarPendientes();verificarToken();
 setInterval(()=>{cargarMetricas();cargarActividad();cargarPendientes();},30000);
+setInterval(verificarToken, 300000);
 </script>
+
+<!-- Modal token -->
+<div id="modal-token" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:12px;padding:24px;width:460px;max-width:90vw">
+    <p style="font-size:14px;font-weight:600;margin-bottom:8px">🔑 Actualizar token de Mercado Libre</p>
+    <p style="font-size:12px;color:#666;margin-bottom:12px">El token expira cada 6 horas. Para renovarlo:</p>
+    <ol style="font-size:12px;color:#666;margin-bottom:12px;padding-left:16px;line-height:1.8">
+      <li>Abrí este link: <a href="https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=7554500472334410&redirect_uri=https://httpbin.org/get" target="_blank" style="color:#185FA5">Autorizar app ML</a></li>
+      <li>Iniciá sesión con tu cuenta</li>
+      <li>Copiá el código <strong>TG-...</strong> de la URL</li>
+      <li>Pegalo acá abajo</li>
+    </ol>
+    <input type="text" id="token-code-input" placeholder="TG-xxxxxxxxxxxxxxxx-211711561" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:12px;font-family:'Inter',sans-serif;margin-bottom:8px;box-sizing:border-box">
+    <div id="token-result" style="min-height:20px;margin-bottom:12px;font-size:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="cerrarModalToken()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
+      <button id="btn-actualizar-token" onclick="actualizarTokenManual()" style="flex:2;background:#1a1a1a;color:#fff;border:none;padding:9px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">Actualizar token</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>"""
 
@@ -1345,6 +1441,69 @@ def api_precio_ml():
         })
     except Exception as e:
         return jsonify({"precio_mediano": None, "error": str(e)})
+
+
+@app.route("/api/intercambiar-codigo", methods=["POST"])
+def api_intercambiar_codigo():
+    """Intercambia un código TG- por un access_token y lo guarda automáticamente."""
+    try:
+        code = request.json.get("code", "").strip()
+        if not code:
+            return jsonify({"ok": False, "error": "Código vacío"})
+        r = requests.post("https://api.mercadolibre.com/oauth/token", data={
+            "grant_type":    "authorization_code",
+            "client_id":     CONFIG["ML_CLIENT_ID"],
+            "client_secret": CONFIG["ML_CLIENT_SECRET"],
+            "code":          code,
+            "redirect_uri":  "https://httpbin.org/get",
+        })
+        if r.status_code != 200:
+            return jsonify({"ok": False, "error": r.json().get("message", "Error al intercambiar código")})
+        data = r.json()
+        sistema.ml.token = data["access_token"]
+        CONFIG["ML_ACCESS_TOKEN"] = data["access_token"]
+        if data.get("refresh_token"):
+            CONFIG["ML_REFRESH_TOKEN"] = data["refresh_token"]
+            sistema.ml.cfg["ML_REFRESH_TOKEN"] = data["refresh_token"]
+        sistema.ml._ultimo_refresh = datetime.now()
+        sistema.ml._guardar_token()
+        log("🔑 Token actualizado desde dashboard")
+        return jsonify({"ok": True, "mensaje": "Token actualizado y guardado"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/api/actualizar-token", methods=["POST"])
+def api_actualizar_token():
+    """Actualiza el access token y refresh token manualmente."""
+    datos = request.json
+    access = datos.get("access_token", "").strip()
+    refresh = datos.get("refresh_token", "").strip()
+    if access:
+        sistema.ml.token = access
+        CONFIG["ML_ACCESS_TOKEN"] = access
+    if refresh:
+        CONFIG["ML_REFRESH_TOKEN"] = refresh
+        sistema.ml.cfg["ML_REFRESH_TOKEN"] = refresh
+    sistema.ml._ultimo_refresh = datetime.now()
+    sistema.ml._guardar_token()
+    log("🔑 Token actualizado manualmente desde dashboard")
+    return jsonify({"ok": True, "mensaje": "Token actualizado y guardado"})
+
+
+@app.route("/api/estado-token")
+def api_estado_token():
+    """Devuelve el estado del token actual."""
+    segundos = (datetime.now() - sistema.ml._ultimo_refresh).total_seconds()
+    horas = int(segundos / 3600)
+    minutos = int((segundos % 3600) / 60)
+    expira_en = max(0, 6 - horas)
+    return jsonify({
+        "ultimo_refresh": f"hace {horas}h {minutos}m",
+        "expira_en_horas": expira_en,
+        "estado": "ok" if expira_en > 0 else "expirado",
+        "tiene_refresh_token": bool(CONFIG.get("ML_REFRESH_TOKEN")),
+    })
 
 
 @app.route("/api/buscar-vendedor")
@@ -1595,9 +1754,10 @@ def log(msg):
 
 
 def scheduler_thread():
-    """Corre el ciclo automático cada hora."""
+    """Corre el ciclo automático cada hora y refresca el token cada 5 horas."""
     schedule.every(1).hours.do(sistema.ciclo_completo)
     schedule.every(6).hours.do(sistema.actualizar_metricas)
+    schedule.every(5).hours.do(sistema.ml.refrescar_token)  # Refresh proactivo
     while True:
         schedule.run_pending()
         time.sleep(60)
