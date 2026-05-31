@@ -2614,9 +2614,9 @@ ANÁLISIS DE COMPETENCIA:
 {comp_txt}
 
 PRECIOS DE COMPETENCIA:
-- Mínimo: ${precio_min_comp:,.0f if precio_min_comp else 'N/A'}
-- Mediano: ${precio_mediano_comp:,.0f if precio_mediano_comp else 'N/A'}
-- Máximo: ${precio_max_comp:,.0f if precio_max_comp else 'N/A'}
+- Mínimo: ${f"{precio_min_comp:,.0f}" if precio_min_comp else "N/A"}
+- Mediano: ${f"{precio_mediano_comp:,.0f}" if precio_mediano_comp else "N/A"}
+- Máximo: ${f"{precio_max_comp:,.0f}" if precio_max_comp else "N/A"}
 
 HERRAMIENTAS DISPONIBLES EN ML: {', '.join(promos_disponibles) if promos_disponibles else 'Descuentos manuales'}
 
