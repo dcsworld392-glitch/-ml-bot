@@ -5,3 +5,4 @@ schedule
 playwright
 beautifulsoup4
 lxml
+reportlab

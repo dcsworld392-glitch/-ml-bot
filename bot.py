@@ -1326,6 +1326,7 @@ async function mejorarCalidad(){
       clearInterval(iv);
       document.getElementById('mejora-barra').style.background = '#3B6D11';
       document.getElementById('mejora-resultado').textContent = `✅ ${d.mejorados} publicaciones mejoradas a 75%+`;
+      document.getElementById('btn-descargar-reporte').style.display = 'block';
       btn.disabled = false;
       btn.textContent = '✨ Mejorar calidad publicaciones';
     }
@@ -1392,7 +1393,10 @@ setInterval(verificarToken, 300000);
     <p id="mejora-txt" style="font-size:12px;color:#666;margin-bottom:6px">Iniciando...</p>
     <p id="mejora-producto" style="font-size:12px;color:#185FA5;font-weight:500;margin-bottom:12px;min-height:18px"></p>
     <p id="mejora-resultado" style="font-size:13px;font-weight:600;color:#3B6D11;min-height:20px"></p>
-    <button onclick="cerrarModalMejora()" style="margin-top:14px;width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cerrar</button>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="cerrarModalMejora()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cerrar</button>
+      <a id="btn-descargar-reporte" href="/api/reporte-calidad-pdf" target="_blank" style="flex:1;background:#1a1a1a;color:#fff;padding:9px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:none">📄 Descargar reporte PDF</a>
+    </div>
   </div>
 </div>
 
@@ -1511,6 +1515,138 @@ def api_mis_publicaciones():
 
 
 mejora_progreso = {"corriendo": False, "actual": 0, "total": 0, "producto_actual": "", "mejorados": 0, "resultados": []}
+
+@app.route("/api/reporte-calidad-pdf")
+def api_reporte_calidad_pdf():
+    """Genera un reporte PDF de las publicaciones mejoradas."""
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.colors import HexColor
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        import io
+        from datetime import datetime
+
+        datos = mejora_progreso
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4,
+                                rightMargin=2*cm, leftMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+
+        styles = getSampleStyleSheet()
+        verde = HexColor('#3B6D11')
+        azul = HexColor('#185FA5')
+        rojo = HexColor('#A32D2D')
+        gris = HexColor('#666666')
+        gris_claro = HexColor('#F7F6F3')
+
+        estilo_titulo = ParagraphStyle('titulo', parent=styles['Title'],
+                                       textColor=HexColor('#1a1a1a'), fontSize=20, spaceAfter=6)
+        estilo_subtitulo = ParagraphStyle('subtitulo', parent=styles['Normal'],
+                                          textColor=gris, fontSize=11, spaceAfter=16)
+        estilo_h2 = ParagraphStyle('h2', parent=styles['Heading2'],
+                                   textColor=azul, fontSize=13, spaceBefore=14, spaceAfter=6)
+        estilo_body = ParagraphStyle('body', parent=styles['Normal'],
+                                     textColor=HexColor('#1a1a1a'), fontSize=10, spaceAfter=4)
+        estilo_verde = ParagraphStyle('verde', parent=styles['Normal'],
+                                      textColor=verde, fontSize=10, spaceAfter=4)
+        estilo_rojo = ParagraphStyle('rojo', parent=styles['Normal'],
+                                     textColor=rojo, fontSize=10, spaceAfter=4)
+        estilo_gris = ParagraphStyle('gris', parent=styles['Normal'],
+                                     textColor=gris, fontSize=9, spaceAfter=3)
+
+        story = []
+
+        # Encabezado
+        story.append(Paragraph("Simple's — Reporte de Calidad", estilo_titulo))
+        fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
+        story.append(Paragraph(f"Generado el {fecha}", estilo_subtitulo))
+        story.append(HRFlowable(width="100%", thickness=1, color=HexColor('#e5e3de')))
+        story.append(Spacer(1, 0.5*cm))
+
+        # Resumen
+        total = datos.get("total", 0)
+        mejoradas = datos.get("mejorados", 0)
+        resultados = datos.get("resultados", [])
+        ok_list = [r for r in resultados if r.get("ok") and not r.get("ya_ok")]
+        ya_ok = [r for r in resultados if r.get("ya_ok")]
+        errores = [r for r in resultados if not r.get("ok")]
+
+        story.append(Paragraph("Resumen ejecutivo", estilo_h2))
+        resumen_data = [
+            ["Total publicaciones revisadas", str(total)],
+            ["Publicaciones mejoradas", str(mejoradas)],
+            ["Ya estaban en 75%+", str(len(ya_ok))],
+            ["Con errores", str(len(errores))],
+        ]
+        t = Table(resumen_data, colWidths=[12*cm, 4*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), gris_claro),
+            ('FONTSIZE', (0,0), (-1,-1), 10),
+            ('TEXTCOLOR', (1,0), (1,0), verde),
+            ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+            ('ROWBACKGROUNDS', (0,0), (-1,-1), [colors.white, gris_claro]),
+            ('GRID', (0,0), (-1,-1), 0.5, HexColor('#e5e3de')),
+            ('PADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(t)
+        story.append(Spacer(1, 0.8*cm))
+
+        # Detalle de publicaciones mejoradas
+        if ok_list:
+            story.append(Paragraph("Publicaciones mejoradas", estilo_h2))
+            for i, r in enumerate(ok_list, 1):
+                story.append(Paragraph(f"{i}. {r.get('titulo', r.get('item_id', ''))}", estilo_body))
+                score_ant = r.get("score_anterior", "?")
+                score_est = r.get("score_estimado", 80)
+                story.append(Paragraph(f"   Score anterior: {score_ant}% → Score estimado: {score_est}%", estilo_verde))
+                mejoras = r.get("mejoras_aplicadas", [])
+                if mejoras:
+                    mejoras_txt = ", ".join(mejoras)
+                    story.append(Paragraph(f"   Mejoras aplicadas: {mejoras_txt}", estilo_gris))
+                story.append(Spacer(1, 0.2*cm))
+
+        # Publicaciones con errores
+        if errores:
+            story.append(Paragraph("Publicaciones con errores", estilo_h2))
+            for r in errores:
+                story.append(Paragraph(f"• {r.get('item_id', '')} — {r.get('error', 'Error desconocido')}", estilo_rojo))
+
+        # Recomendaciones de la IA
+        story.append(Spacer(1, 0.5*cm))
+        story.append(HRFlowable(width="100%", thickness=1, color=HexColor('#e5e3de')))
+        story.append(Paragraph("Recomendaciones para seguir mejorando", estilo_h2))
+        recomendaciones = [
+            "Agregar código universal (GTIN/EAN) a cada producto para ganar 10 puntos de calidad.",
+            "Subir al menos 4 fotos por publicación en fondo blanco para maximizar el puntaje de imágenes.",
+            "Completar las características secundarias (peso, dimensiones, material) para llegar al nivel Profesional.",
+            "Activar Mercado Envíos cuando tu cuenta alcance el nivel necesario para aumentar la visibilidad.",
+            "Responder preguntas en menos de 1 hora para mejorar la reputación y el ranking.",
+            "Ofrecer devoluciones para aumentar la confianza del comprador y mejorar la conversión.",
+        ]
+        for rec in recomendaciones:
+            story.append(Paragraph(f"• {rec}", estilo_body))
+            story.append(Spacer(1, 0.1*cm))
+
+        # Pie de página
+        story.append(Spacer(1, 1*cm))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#e5e3de')))
+        story.append(Paragraph("Simple's — Sistema de automatización para Mercado Libre", estilo_gris))
+
+        doc.build(story)
+        buffer.seek(0)
+
+        from flask import Response
+        return Response(
+            buffer.getvalue(),
+            mimetype='application/pdf',
+            headers={'Content-Disposition': f'attachment; filename=reporte_calidad_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf'}
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 
 @app.route("/api/progreso-mejora")
 def api_progreso_mejora():
