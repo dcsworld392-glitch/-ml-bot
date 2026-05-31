@@ -1488,8 +1488,8 @@ def api_mejorar_calidad():
         mejorados = []
         for item_id in item_ids:
             try:
-                # Usar /performance (reemplaza al discontinuado /health)
-                perf = sistema.ml.get(f"/items/{item_id}/performance")
+                # Usar /item/ (singular) - endpoint correcto de performance
+                perf = sistema.ml.get(f"/item/{item_id}/performance")
                 score = perf.get("score", 100)
                 log(f"📊 {item_id}: score={score}")
                 if score < 75:
