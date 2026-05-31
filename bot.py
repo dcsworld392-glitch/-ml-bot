@@ -1671,7 +1671,12 @@ async function verEstrategiaIA(itemId, btn) {
 
         <div style="background:white;border-radius:6px;padding:10px 12px;margin-bottom:10px;border:0.5px solid #e5e3de">
           <p style="font-size:11px;font-weight:600;color:#185FA5;margin-bottom:4px">📌 Recomendación principal</p>
-          <p style="font-size:12px;color:#1a1a1a">${e.recomendacion_principal}</p>
+          <p style="font-size:12px;color:#1a1a1a;margin-bottom:8px">${e.recomendacion_principal}</p>
+          <button onclick="aplicarRecomendacion('${itemId}', ${e.precio_sugerido}, ${e.descuento_sugerido_pct||0}, '${e.herramienta_recomendada}', this)"
+            style="background:#185FA5;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">
+            ⚡ Aplicar recomendación
+          </button>
+          <div id="rec-resultado-${itemId}" style="margin-top:6px;font-size:11px"></div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
@@ -1718,6 +1723,42 @@ async function verEstrategiaIA(itemId, btn) {
     panel.innerHTML = '<p style="color:#A32D2D;font-size:11px">Error al analizar</p>';
     btn.textContent = '🧠 Estrategia IA';
     btn.disabled = false;
+  }
+}
+
+async function aplicarRecomendacion(itemId, precioSugerido, descuentoPct, herramienta, btn) {
+  btn.textContent = '⏳ Verificando...';
+  btn.disabled = true;
+  const resEl = document.getElementById(`rec-resultado-${itemId}`);
+
+  try {
+    const r = await fetch('/api/aplicar-recomendacion', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        item_id: itemId,
+        precio_sugerido: precioSugerido,
+        descuento_pct: descuentoPct,
+        herramienta: herramienta,
+      })
+    });
+    const d = await r.json();
+
+    if (d.ok) {
+      btn.textContent = '✅ Aplicado';
+      btn.style.background = '#3B6D11';
+      resEl.innerHTML = `<span style="color:#3B6D11">✅ Precio actualizado a $${d.precio_aplicado?.toLocaleString('es-AR')} · Margen: ${d.margen_pct}% · Ganancia: $${d.ganancia?.toLocaleString('es-AR')}</span>`;
+      // Actualizar precio en la card
+      setTimeout(() => cargarReportePub(), 2000);
+    } else {
+      btn.textContent = '⚡ Aplicar recomendación';
+      btn.disabled = false;
+      resEl.innerHTML = `<span style="color:#A32D2D">❌ ${d.error}</span>`;
+    }
+  } catch(e) {
+    btn.textContent = '⚡ Aplicar recomendación';
+    btn.disabled = false;
+    resEl.innerHTML = '<span style="color:#A32D2D">❌ Error de conexión</span>';
   }
 }
 
@@ -2534,6 +2575,100 @@ def api_opciones_promocion(item_id):
                 })
 
         return jsonify({"ok": True, "item_id": item_id, "precio_actual": precio, "opciones": opciones})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/api/aplicar-recomendacion", methods=["POST"])
+def api_aplicar_recomendacion():
+    """Aplica la recomendación de la IA con validación de margen mínimo."""
+    try:
+        from costos import CalculadoraCostos
+        datos = request.json
+        item_id = datos.get("item_id")
+        precio_sugerido = float(datos.get("precio_sugerido", 0))
+        descuento_pct = float(datos.get("descuento_pct", 0))
+        herramienta = datos.get("herramienta", "")
+
+        if not item_id:
+            return jsonify({"ok": False, "error": "item_id requerido"})
+
+        # Obtener datos actuales del item
+        item = sistema.ml.get(f"/items/{item_id}")
+        precio_actual = item.get("price", 0)
+        cat_id = item.get("category_id", "")
+
+        # Calcular precio final a aplicar
+        if precio_sugerido > 0:
+            precio_nuevo = precio_sugerido
+        elif descuento_pct > 0:
+            precio_nuevo = round(precio_actual * (1 - descuento_pct/100), 2)
+        else:
+            precio_nuevo = precio_actual
+
+        # Obtener costo del producto desde JSON de Droppers
+        costo = 0
+        try:
+            json_path = os.path.join(os.path.dirname(__file__), "productos_droppers.json")
+            if os.path.exists(json_path):
+                with open(json_path, "r", encoding="utf-8") as f:
+                    productos = json.load(f)
+                titulo = item.get("title", "").lower()
+                for p in productos:
+                    pt = p.get("titulo", "").lower()
+                    palabras = titulo.split()[:3]
+                    if sum(1 for w in palabras if w in pt) >= 2:
+                        costo = p.get("costo", 0)
+                        break
+        except:
+            pass
+
+        # Validación de margen mínimo — nunca vender por debajo del costo
+        calc = CalculadoraCostos()
+        if costo > 0:
+            calculo = calc.calcular(precio_nuevo, costo, "default", False)
+            margen = calculo["margen_neto_pct"]
+            ganancia = calculo["ganancia_neta"]
+
+            # Margen mínimo absoluto: 10% — nunca debajo del costo
+            if ganancia <= 0:
+                return jsonify({
+                    "ok": False,
+                    "error": f"⛔ El precio ${precio_nuevo:,.0f} no cubre el costo (${costo:,.0f}). No se puede aplicar."
+                })
+            if margen < 10:
+                # Calcular precio mínimo con 10% de margen
+                precio_minimo = calc.calcular_precio_para_margen(costo, 10, "default", False)
+                return jsonify({
+                    "ok": False,
+                    "error": f"⛔ Margen de {margen:.1f}% es muy bajo. Precio mínimo recomendado: ${precio_minimo:,.0f}"
+                })
+        else:
+            # Sin costo conocido, calcular margen sobre el precio solo con comisiones
+            calculo = calc.calcular(precio_nuevo, precio_nuevo * 0.4, "default", False)
+            margen = calculo["margen_neto_pct"]
+            ganancia = calculo["ganancia_neta"]
+
+        # Precio mínimo de ML
+        if precio_nuevo < 1000:
+            precio_nuevo = 1000.0
+
+        # Aplicar precio
+        resultado = sistema.ml.put(f"/items/{item_id}", {"price": precio_nuevo})
+        if resultado.get("id"):
+            log(f"✅ Recomendación aplicada en {item_id}: ${precio_actual:,.0f} → ${precio_nuevo:,.0f}")
+            return jsonify({
+                "ok": True,
+                "item_id": item_id,
+                "precio_anterior": precio_actual,
+                "precio_aplicado": precio_nuevo,
+                "margen_pct": round(margen, 1),
+                "ganancia": round(ganancia, 2),
+                "herramienta": herramienta,
+            })
+        else:
+            return jsonify({"ok": False, "error": resultado.get("message", "Error al actualizar precio")})
+
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
