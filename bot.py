@@ -1549,8 +1549,30 @@ html, body {
 
       </div>
 
-      <!-- VENTAS PENDIENTES -->
-      <div id="seccion-pendientes" style="display:none;margin-bottom:20px">
+          <!-- PANEL MEJORAR CALIDAD -->
+      <div id="panel-mejora-calidad" style="display:none;margin-bottom:20px" class="page-section">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Mejora de calidad automatica</span>
+            <button onclick="document.getElementById('panel-mejora-calidad').style.display='none'" class="card-action">✕ Cerrar</button>
+          </div>
+          <div class="card-body">
+            <p id="mejora-txt" style="font-size:13px;color:var(--t2);margin-bottom:16px">Iniciando proceso...</p>
+            <div style="height:4px;background:var(--bg-3);border-radius:2px;overflow:hidden;margin-bottom:8px">
+              <div id="mejora-barra" style="height:100%;background:var(--blue);border-radius:2px;transition:width .5s var(--ease-out);width:0%"></div>
+            </div>
+            <p id="mejora-producto" style="font-size:12px;color:var(--blue);font-weight:500;margin-bottom:16px;min-height:18px;line-height:1.5"></p>
+            <div id="mejora-log" style="background:var(--bg-2);border-radius:var(--r-sm);padding:12px 14px;max-height:260px;overflow-y:auto;font-size:12px;color:var(--t2);line-height:1.8"></div>
+            <p id="mejora-resultado" style="font-size:14px;font-weight:600;color:var(--green-dk);margin-top:14px;min-height:20px"></p>
+            <div style="display:flex;gap:8px;margin-top:16px">
+              <a id="btn-descargar-reporte" href="/api/reporte-calidad-pdf" target="_blank" class="btn-apple-primary" style="text-decoration:none;display:none">📄 Descargar PDF</a>
+              <button onclick="verHistorial()" class="btn-apple-secondary" style="display:none" id="btn-ver-historial">📋 Ver historial</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:10px">Ventas pendientes</div>
         <div id="lista-pendientes"></div>
       </div>
@@ -1846,22 +1868,43 @@ html, body {
 </div>
 
 <!-- Panel lateral mejora calidad -->
-<div id="modal-mejora" style="display:none;position:fixed;bottom:24px;right:24px;width:380px;background:white;border-radius:12px;padding:20px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.15);border:0.5px solid #e5e3de">
+<div id="panel-mejora-calidad" style="display:none;margin-bottom:20px" class="page-section">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Mejorando calidad</span>
+      <button onclick="document.getElementById('panel-mejora-calidad').style.display='none'" class="card-action">✕ Cerrar</button>
+    </div>
+    <div class="card-body">
+      <p id="mejora-txt" style="font-size:13px;color:var(--t2);margin-bottom:16px">Iniciando proceso...</p>
+      <div style="height:4px;background:var(--bg-3);border-radius:2px;overflow:hidden;margin-bottom:6px">
+        <div id="mejora-barra" style="height:100%;background:var(--blue);border-radius:2px;transition:width .5s var(--ease-out);width:0%"></div>
+      </div>
+      <p id="mejora-producto" style="font-size:12px;color:var(--blue);font-weight:500;margin-bottom:16px;min-height:18px;line-height:1.5"></p>
+
+      <div id="mejora-log" style="background:var(--bg-2);border-radius:var(--r-sm);padding:12px 14px;max-height:280px;overflow-y:auto;font-size:12px;color:var(--t2);line-height:1.7;font-variant-numeric:tabular-nums"></div>
+
+      <p id="mejora-resultado" style="font-size:14px;font-weight:600;color:var(--green-dk);margin-top:14px;min-height:20px"></p>
+
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <a id="btn-descargar-reporte" href="/api/reporte-calidad-pdf" target="_blank" class="btn-apple-primary" style="text-decoration:none;display:none">📄 Descargar PDF</a>
+        <button onclick="navigateTo('historial', document.querySelector('[onclick*=historial]'))" class="btn-apple-secondary" style="display:none" id="btn-ver-historial">📋 Ver historial</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating mejora fallback -->
+<div id="modal-mejora" style="display:none;position:fixed;bottom:24px;right:24px;width:360px;background:var(--white);border-radius:var(--r-xl);padding:22px;z-index:200;box-shadow:0 12px 40px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.06)">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <p style="font-size:13px;font-weight:600;color:#1a1a1a">✨ Mejorando calidad</p>
-    <button onclick="cerrarModalMejora()" style="background:none;border:none;color:#999;font-size:16px;cursor:pointer;padding:0;line-height:1">✕</button>
+    <p style="font-size:14px;font-weight:600;color:var(--t1);letter-spacing:-.02em">Mejorando calidad</p>
+    <button onclick="cerrarModalMejora()" style="background:rgba(0,0,0,.05);border:none;color:var(--t2);cursor:pointer;padding:5px 8px;border-radius:980px">✕</button>
   </div>
-  <div style="height:6px;background:#e5e3de;border-radius:3px;overflow:hidden;margin-bottom:8px">
-    <div id="mejora-barra" style="height:100%;background:#185FA5;border-radius:3px;transition:width .5s;width:0%"></div>
+  <div style="height:4px;background:var(--bg-3);border-radius:2px;overflow:hidden;margin-bottom:8px">
+    <div id="mejora-barra-float" style="height:100%;background:var(--blue);border-radius:2px;transition:width .5s;width:0%"></div>
   </div>
-  <p id="mejora-txt" style="font-size:11px;color:#666;margin-bottom:4px">Iniciando...</p>
-  <p id="mejora-producto" style="font-size:11px;color:#185FA5;font-weight:500;margin-bottom:8px;min-height:16px;line-height:1.4"></p>
-  <p id="mejora-resultado" style="font-size:12px;font-weight:600;color:#3B6D11;min-height:18px"></p>
-  <div style="display:flex;gap:8px;margin-top:12px">
-    <button onclick="cerrarModalMejora()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:7px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif">Minimizar</button>
-    <a id="btn-descargar-reporte" href="/api/reporte-calidad-pdf" target="_blank" style="flex:1;background:#1a1a1a;color:#fff;padding:7px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:none">📄 Descargar PDF</a>
-    <button onclick="verHistorial()" style="flex:1;background:#185FA5;color:#fff;border:none;padding:7px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;display:none" id="btn-ver-historial">📋 Historial</button>
-  </div>
+  <p id="mejora-txt-float" style="font-size:12px;color:var(--t3);margin-bottom:6px">Iniciando...</p>
+  <p id="mejora-producto-float" style="font-size:12px;color:var(--blue);font-weight:500;margin-bottom:8px;min-height:16px"></p>
+  <p id="mejora-resultado-float" style="font-size:13px;font-weight:600;color:var(--green-dk);min-height:18px"></p>
 </div>
 
 <!-- Modal token -->
@@ -2359,52 +2402,77 @@ async function analizarPromociones(){
 async function procesarPreguntas(){document.getElementById('actividad').innerHTML='<p class="loading">Procesando...</p>';await fetch('/api/procesar-preguntas',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},3000);}
 async function cicloCompleto(){await fetch('/api/ciclo',{method:'POST'});setTimeout(()=>{cargarMetricas();cargarActividad();},5000);}
 async function mejorarCalidad(){
-  const btn = document.getElementById('btn-mejorar-calidad');
-  if (btn) { btn.disabled = true; btn.textContent = '✨ Mejorando...'; btn.classList.add('apple-loading'); }
-
-  const panel = document.getElementById('modal-mejora');
+  const panel = document.getElementById('panel-mejora-calidad');
   panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth', block:'start'});
+
   document.getElementById('mejora-barra').style.width = '0%';
   document.getElementById('mejora-barra').style.background = 'var(--blue)';
-  document.getElementById('mejora-txt').textContent = 'Iniciando...';
+  document.getElementById('mejora-txt').textContent = 'Analizando publicaciones con score bajo...';
   document.getElementById('mejora-producto').textContent = '';
   document.getElementById('mejora-resultado').textContent = '';
+  document.getElementById('mejora-log').innerHTML = '';
   document.getElementById('btn-descargar-reporte').style.display = 'none';
   document.getElementById('btn-ver-historial').style.display = 'none';
+
+  const btn = document.getElementById('btn-mejorar-calidad');
+  if (btn) { btn.disabled = true; btn.classList.add('apple-loading'); }
+
+  function addLog(msg, color='var(--t2)') {
+    const log = document.getElementById('mejora-log');
+    const time = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    log.innerHTML += `<div style="color:${color}"><span style="color:var(--t3)">${time}</span>  ${msg}</div>`;
+    log.scrollTop = log.scrollHeight;
+  }
+
+  addLog('Conectando con Mercado Libre...');
 
   try {
     const resp = await fetch('/api/mejorar-calidad', {method:'POST'});
     const d = await resp.json();
     if (!d.ok) {
-      document.getElementById('mejora-txt').textContent = 'Error: ' + (d.error || 'desconocido');
-      if (btn) { btn.disabled = false; btn.textContent = '✨ Mejorar calidad publicaciones'; btn.classList.remove('apple-loading'); }
+      document.getElementById('mejora-txt').textContent = 'Error: ' + (d.error||'desconocido');
+      addLog('Error: ' + (d.error||'desconocido'), 'var(--red)');
+      if (btn) { btn.disabled = false; btn.classList.remove('apple-loading'); }
       return;
     }
+    addLog('Proceso iniciado en segundo plano', 'var(--green-dk)');
   } catch(e) {
-    document.getElementById('mejora-txt').textContent = 'Error de conexión';
-    if (btn) { btn.disabled = false; btn.textContent = '✨ Mejorar calidad publicaciones'; }
+    document.getElementById('mejora-txt').textContent = 'Error de conexion';
+    addLog('Error de conexion', 'var(--red)');
+    if (btn) { btn.disabled = false; btn.classList.remove('apple-loading'); }
     return;
   }
 
+  let lastProducto = '';
   const iv = setInterval(async () => {
     try {
       const r = await fetch('/api/progreso-mejora');
       const p = await r.json();
       const pct = p.total > 0 ? Math.round(p.actual / p.total * 100) : 0;
       document.getElementById('mejora-barra').style.width = pct + '%';
-      document.getElementById('mejora-txt').textContent = `${p.actual}/${p.total} revisadas - ${p.mejorados} mejoradas`;
-      document.getElementById('mejora-producto').textContent = p.producto_actual || '';
+      document.getElementById('mejora-txt').textContent = `${p.actual} de ${p.total} revisadas — ${p.mejorados} mejoradas`;
+      if (p.producto_actual && p.producto_actual !== lastProducto) {
+        lastProducto = p.producto_actual;
+        document.getElementById('mejora-producto').textContent = '→ ' + p.producto_actual;
+        addLog('→ ' + p.producto_actual, 'var(--blue)');
+      }
       if (!p.corriendo && p.actual >= p.total && p.total > 0) {
         clearInterval(iv);
         document.getElementById('mejora-barra').style.background = 'var(--green-dk)';
-        document.getElementById('mejora-resultado').textContent = `✅ ${p.mejorados} mejoradas a 75%+`;
-        document.getElementById('btn-descargar-reporte').style.display = 'block';
-        document.getElementById('btn-ver-historial').style.display = 'block';
-        if (btn) { btn.disabled = false; btn.textContent = '✨ Mejorar calidad publicaciones'; }
+        document.getElementById('mejora-barra').style.width = '100%';
+        document.getElementById('mejora-producto').textContent = '';
+        document.getElementById('mejora-txt').textContent = 'Proceso completado';
+        document.getElementById('mejora-resultado').textContent = `✅ ${p.mejorados} publicaciones mejoradas`;
+        addLog(`Listo — ${p.mejorados} mejoradas`, 'var(--green-dk)');
+        document.getElementById('btn-descargar-reporte').style.display = 'inline-flex';
+        document.getElementById('btn-ver-historial').style.display = 'inline-flex';
+        if (btn) { btn.disabled = false; btn.classList.remove('apple-loading'); }
       }
     } catch(e) {}
   }, 2000);
 }
+
 
 function cerrarModalMejora() {
   document.getElementById('modal-mejora').style.display = 'none';
@@ -3185,7 +3253,10 @@ function navigateTo(page, btn) {
     case 'publicar':
       setTimeout(() => togglePublicar(), delay);
       break;
-    case 'calidad': mejorarCalidad(); break;
+    case 'calidad':
+      const mejPanel = document.getElementById('panel-mejora-calidad');
+      showPanel(mejPanel, () => mejorarCalidad());
+      break;
     case 'historial': verHistorial(); break;
     case 'preguntas': procesarPreguntas(); break;
     case 'sugerencias': obtenerSugerencias(); break;
