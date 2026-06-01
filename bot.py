@@ -799,6 +799,11 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
 /* =========== SIDEBAR PAGES =========== */
 .page-view{display:none}
 .page-view.active{display:block}
+
+/* PAGE TRANSITIONS */
+.content > *{animation:fadeSlideIn .22s cubic-bezier(.4,0,.2,1) both}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+#panel-reporte-pub{animation:fadeSlideIn .25s cubic-bezier(.4,0,.2,1) both}
 </style>
 </head>
 <body>
@@ -1253,11 +1258,7 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
     </div>
   </div>
 
-  <div style="text-align:center;padding-bottom:32px;display:flex;gap:10px;justify-content:center">
-    <button class="cycle-btn" onclick="cicloCompleto()">Ejecutar ciclo completo</button>
-    <button id="btn-mejorar-calidad" class="cycle-btn" style="background:#185FA5" onclick="mejorarCalidad()">✨ Mejorar calidad publicaciones</button>
-    <button class="cycle-btn" style="background:#3B6D11" onclick="verHistorial()">📋 Historial de reportes</button>
-  </div>
+
 </main>
 
 
@@ -2592,49 +2593,66 @@ const VIEWS = {
 };
 
 function navigateTo(page, btn) {
-  // Update sidebar active state
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 
-  // Update topbar title
   const titles = {
-    dashboard: 'Dashboard',
-    publicaciones: 'Mis publicaciones',
-    publicar: 'Publicar productos',
-    calidad: 'Mejorar calidad',
-    historial: 'Historial de reportes',
-    preguntas: 'Procesar preguntas',
+    dashboard: 'Dashboard', publicaciones: 'Mis publicaciones',
+    publicar: 'Publicar productos', calidad: 'Mejorar calidad',
+    historial: 'Historial de reportes', preguntas: 'Preguntas',
     sugerencias: 'Sugerencias IA',
   };
   document.querySelector('.page-title').textContent = titles[page] || page;
 
-  // Handle navigation
+  // Animate out open panels
+  const panels = ['panel-reporte-pub', 'panel-publicar'].map(id => document.getElementById(id)).filter(Boolean);
+  let hasOpen = false;
+  panels.forEach(el => {
+    if (el && el.style.display !== 'none') {
+      hasOpen = true;
+      el.style.transition = 'opacity .15s ease, transform .15s ease';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(4px)';
+      setTimeout(() => { el.style.display = 'none'; el.style.opacity = ''; el.style.transform = ''; el.style.transition = ''; }, 150);
+    }
+  });
+  if (typeof cerrarDetail === 'function') cerrarDetail();
+
+  const delay = hasOpen ? 170 : 0;
+
+  function showPanel(el, callback) {
+    setTimeout(() => {
+      el.style.display = 'block';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(8px)';
+      el.style.transition = 'opacity .25s cubic-bezier(.4,0,.2,1), transform .25s cubic-bezier(.4,0,.2,1)';
+      el.scrollIntoView({behavior:'smooth', block:'start'});
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+        setTimeout(() => { el.style.transition = ''; }, 260);
+        if (callback) callback();
+      }));
+    }, delay);
+  }
+
   switch(page) {
-    case 'dashboard':
-      // Collapse any open panels
-      document.getElementById('panel-reporte-pub').style.display = 'none';
-      document.getElementById('panel-publicar')?.style && (document.getElementById('panel-publicar').style.display = 'none');
-      break;
+    case 'dashboard': break;
     case 'publicaciones':
-      toggleReportePub();
-      document.getElementById('panel-reporte-pub').scrollIntoView({behavior:'smooth', block:'start'});
+      const pubPanel = document.getElementById('panel-reporte-pub');
+      showPanel(pubPanel, async () => {
+        if (document.getElementById('reporte-pub-contenido').style.display === 'none') {
+          await cargarReportePub();
+        }
+      });
       break;
     case 'publicar':
-      togglePublicar();
-      document.getElementById('panel-publicar')?.scrollIntoView({behavior:'smooth', block:'start'});
+      setTimeout(() => togglePublicar(), delay);
       break;
-    case 'calidad':
-      mejorarCalidad();
-      break;
-    case 'historial':
-      verHistorial();
-      break;
-    case 'preguntas':
-      procesarPreguntas();
-      break;
-    case 'sugerencias':
-      obtenerSugerencias();
-      break;
+    case 'calidad': mejorarCalidad(); break;
+    case 'historial': verHistorial(); break;
+    case 'preguntas': procesarPreguntas(); break;
+    case 'sugerencias': obtenerSugerencias(); break;
   }
 }
 
@@ -5379,11 +5397,7 @@ main{max-width:1120px;margin:0 auto;padding:36px 24px}
     </div>
   </div>
 
-  <div style="text-align:center;padding-bottom:32px;display:flex;gap:10px;justify-content:center">
-    <button class="cycle-btn" onclick="cicloCompleto()">Ejecutar ciclo completo</button>
-    <button id="btn-mejorar-calidad" class="cycle-btn" style="background:#185FA5" onclick="mejorarCalidad()">✨ Mejorar calidad publicaciones</button>
-    <button class="cycle-btn" style="background:#3B6D11" onclick="verHistorial()">📋 Historial de reportes</button>
-  </div>
+
 </main>
 
 <script>
