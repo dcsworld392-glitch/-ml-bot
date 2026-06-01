@@ -2345,6 +2345,28 @@ def api_mejorar_publicacion_individual():
         return jsonify({"ok": False, "error": str(e)})
 
 
+@app.route("/api/debug-costos")
+def api_debug_costos():
+    """Debug: verificar que el JSON de Droppers está disponible."""
+    try:
+        import os
+        json_path = os.path.join(os.path.dirname(__file__), "productos_droppers.json")
+        existe = os.path.exists(json_path)
+        if existe:
+            with open(json_path, "r", encoding="utf-8") as f:
+                productos = json.load(f)
+            con_precio = [p for p in productos if p.get("costo", 0) > 0]
+            return jsonify({
+                "archivo_existe": True,
+                "total": len(productos),
+                "con_precio": len(con_precio),
+                "ejemplos": [{"titulo": p["titulo"][:40], "costo": p["costo"]} for p in con_precio[:5]]
+            })
+        return jsonify({"archivo_existe": False, "path": json_path})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
 @app.route("/api/reporte-publicaciones")
 def api_reporte_publicaciones():
     """Reporte completo de publicaciones activas con costos, calidad y stock."""

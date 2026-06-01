@@ -1,23 +1,31 @@
-﻿import requests, re
-from bs4 import BeautifulSoup
+﻿import asyncio, json, re
+from playwright.async_api import async_playwright
 
-session = requests.Session()
-session.headers.update({'User-Agent': 'Mozilla/5.0'})
-r = session.get('https://droppers.com.ar/customer/account/login/')
-soup = BeautifulSoup(r.text, 'html.parser')
-fk = soup.find('input', {'name': 'form_key'})
-session.post('https://droppers.com.ar/customer/account/loginPost/', data={
-    'form_key': fk['value'] if fk else '',
-    'login[username]': 'dcsworld392@gmail.com',
-    'login[password]': '220566494Fede@',
-    'send': ''
-})
+async def main():
+    with open(r'C:\Users\Feder\Desktop\mlbot\ml_bot\productos_droppers.json', encoding='utf-8') as f:
+        productos = json.load(f)
+    
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
+        page = await browser.new_page()
+        
+        await page.goto('https://droppers.com.ar/customer/account/login/', timeout=30000)
+        await page.fill('#email', 'dcsworld392@gmail.com')
+        await page.fill('#pass', '220566494Fede@')
+        await page.click('#send2')
+        await page.wait_for_timeout(3000)
+        
+        await page.goto(productos[0]['url'], timeout=20000)
+        await page.wait_for_timeout(2000)
+        
+        precio_el = await page.query_selector('.price')
+        if precio_el:
+            txt = await precio_el.inner_text()
+            print(f'Texto raw: [{repr(txt)}]')
+            print(f'Largo: {len(txt)}')
+            for c in txt:
+                print(f'  char: [{repr(c)}] = {ord(c)}')
+        
+        await browser.close()
 
-r2 = session.get('https://droppers.com.ar/reloj-muneca-oso-panda-blanco-y-negro-ninos-negro.html')
-soup2 = BeautifulSoup(r2.text, 'html.parser')
-
-# Buscar todos los spans con clase price
-for el in soup2.find_all(class_=re.compile('price')):
-    txt = el.get_text(strip=True)
-    if txt and len(txt) < 20:
-        print(repr(txt))
+asyncio.run(main())
