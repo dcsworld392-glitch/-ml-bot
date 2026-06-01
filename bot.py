@@ -654,83 +654,170 @@ main{max-width:1080px;margin:0 auto;padding:32px 24px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--sep2);border-radius:3px}
 @media(max-width:768px){.g4{grid-template-columns:1fr 1fr}.g2,.g3{grid-template-columns:1fr}main{padding:20px 16px}header{padding:0 20px}}
+
+/* NAV BUTTONS */
+.nav-btn{background:none;border:none;font-size:13px;font-weight:500;color:var(--t2);cursor:pointer;padding:6px 12px;border-radius:var(--r1);font-family:'Inter',sans-serif;transition:all var(--e)}
+.nav-btn:hover{background:var(--surface-3);color:var(--t1)}
+
+/* STATUS DOT */
+.status-dot{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;cursor:pointer;padding:4px 10px;border-radius:var(--r4)}
+.green-dot{background:var(--green-bg);color:var(--green-dk)}
+.dot-pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 3s ease-in-out infinite}
+
+/* KPI ROW */
+.kpi-row{display:flex;align-items:center;background:var(--surface);border-radius:var(--r3);box-shadow:var(--sh1);padding:20px 32px;margin-bottom:20px;gap:0}
+.kpi{flex:1;text-align:center}
+.kpi-div{width:1px;height:36px;background:var(--sep);flex-shrink:0}
+.kpi-label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);margin-bottom:6px}
+.kpi-val{display:block;font-size:22px;font-weight:700;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1}
+.kpi-sub{display:block;font-size:10px;color:var(--t3);margin-top:4px}
+
+/* MAIN GRID */
+.main-grid{display:grid;grid-template-columns:1fr 360px;gap:12px;margin-bottom:20px}
+.col-left,.col-right{display:flex;flex-direction:column}
+
+/* CARDS */
+.card{background:var(--surface);border-radius:var(--r3);padding:18px 20px;box-shadow:var(--sh1)}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--t3)}
+.card-badge{font-size:10px;color:var(--t3)}
+.badge-count{background:var(--red-bg);color:var(--red);font-size:10px;font-weight:700;padding:1px 7px;border-radius:var(--r4);min-width:20px;text-align:center}
+
+/* ICON BUTTONS */
+.icon-btn{background:var(--surface-2);border:.5px solid var(--sep);border-radius:var(--r1);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all var(--e);flex-shrink:0}
+.icon-btn:hover{background:var(--surface-3);color:var(--t1)}
+
+/* EMPTY STATE */
+.empty-state{font-size:12px;color:var(--t3);padding:6px 0}
+
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}.kpi-row{flex-wrap:wrap;gap:12px}.kpi-div{display:none}}
 </style>
 </head>
 <body>
+
+<!-- HEADER -->
 <header>
   <div class="brand">
     <div class="brand-dot"></div>
     <span class="brand-name">Simple<span class="brand-apos">'</span>s</span>
   </div>
+  <nav style="display:flex;align-items:center;gap:6px">
+    <button onclick="toggleReportePub()" class="nav-btn">Publicaciones</button>
+    <button onclick="togglePublicar()" class="nav-btn">Publicar</button>
+    <button onclick="verHistorial()" class="nav-btn">Reportes</button>
+  </nav>
   <div class="hdr-right">
-    <span class="pill pill-green">● Bot activo</span>
-    <span id="token-estado" class="pill" style="background:#EAF3DE;color:#3B6D11;border:0.5px solid #C0DD97;cursor:pointer" onclick="verEstadoToken()" title="Estado del token ML">🔑 Token OK</span>
-    <a href="#" onclick="toggleReportePub()" class="pill pill-blue">📊 Mis publicaciones</a>
-    <a href="#" onclick="togglePublicar()" class="pill pill-blue">📦 Publicar productos</a>
-    <span class="pill pill-time" id="last-update">Cargando...</span>
+    <span id="token-estado" class="status-dot green-dot" onclick="verEstadoToken()" title="Token ML activo">
+      <span class="dot-pulse"></span>Bot activo
+    </span>
+    <span class="pill pill-time" id="last-update">--:--</span>
   </div>
 </header>
 
 <main>
-  <div class="sec-label">💰 Ingresos</div>
-  <div class="g4">
-    <div class="mc"><p class="mc-label">Hoy</p><p class="mc-val green" id="m-hoy">-</p><p class="mc-sub" id="m-hoy-v">- ventas</p></div>
-    <div class="mc"><p class="mc-label">Ayer</p><p class="mc-val" id="m-ayer">-</p><p class="mc-sub" id="m-ayer-v">- ventas</p></div>
-    <div class="mc"><p class="mc-label">Últimos 30 días</p><p class="mc-val blue" id="m-30d">-</p><p class="mc-sub" id="m-30d-v">- órdenes</p></div>
-    <div class="mc"><p class="mc-label">Ticket promedio</p><p class="mc-val amber" id="m-ticket">-</p><p class="mc-sub">por venta</p></div>
-  </div>
 
-  <div class="sec-label">💚 Ganancia neta real (después de impuestos y comisiones)</div>
-  <div class="g4">
-    <div class="mc"><p class="mc-label">Ganancia hoy</p><p class="mc-val green" id="m-gan-hoy">-</p><p class="mc-sub">neto</p></div>
-    <div class="mc"><p class="mc-label">Ganancia ayer</p><p class="mc-val" id="m-gan-ayer">-</p><p class="mc-sub">neto</p></div>
-    <div class="mc"><p class="mc-label">Ganancia 30 días</p><p class="mc-val blue" id="m-gan-30d">-</p><p class="mc-sub">neto</p></div>
-    <div class="mc"><p class="mc-label">Margen promedio</p><p class="mc-val amber" id="m-margen">-</p><p class="mc-sub">% estimado</p></div>
-  </div>
-
-  <div class="g2">
-    <div class="panel">
-      <div class="panel-hdr"><span class="panel-title">Ventas recientes</span><span style="font-size:10px;color:#bbb">actualiza cada 30s</span></div>
-      <div id="feed-ventas"><p class="loading">Sin ventas aún. Aparecen acá en tiempo real.</p></div>
+  <!-- KPI ROW: 6 metrics in one line -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <span class="kpi-label">Ingresos hoy</span>
+      <span class="kpi-val green" id="m-hoy">$0</span>
+      <span class="kpi-sub" id="m-hoy-v">0 ventas</span>
     </div>
-    <div>
-      <div class="panel" style="margin-bottom:10px">
-        <div class="panel-hdr">
-          <span class="panel-title">Alertas - requieren atención</span>
+    <div class="kpi-div"></div>
+    <div class="kpi">
+      <span class="kpi-label">Ayer</span>
+      <span class="kpi-val" id="m-ayer">$0</span>
+      <span class="kpi-sub" id="m-ayer-v">0 ventas</span>
+    </div>
+    <div class="kpi-div"></div>
+    <div class="kpi">
+      <span class="kpi-label">30 dias</span>
+      <span class="kpi-val blue" id="m-30d">$0</span>
+      <span class="kpi-sub" id="m-30d-v">0 ordenes</span>
+    </div>
+    <div class="kpi-div"></div>
+    <div class="kpi">
+      <span class="kpi-label">Ganancia neta</span>
+      <span class="kpi-val green" id="m-gan-30d">$0</span>
+      <span class="kpi-sub">30 dias</span>
+    </div>
+    <div class="kpi-div"></div>
+    <div class="kpi">
+      <span class="kpi-label">Margen</span>
+      <span class="kpi-val amber" id="m-margen">0%</span>
+      <span class="kpi-sub">promedio</span>
+    </div>
+    <div class="kpi-div"></div>
+    <div class="kpi">
+      <span class="kpi-label">Ticket</span>
+      <span class="kpi-val" id="m-ticket">$0</span>
+      <span class="kpi-sub">por venta</span>
+    </div>
+  </div>
+
+  <!-- MAIN GRID: left column + right column -->
+  <div class="main-grid">
+
+    <!-- LEFT: activity feed + pending -->
+    <div class="col-left">
+      <div class="card">
+        <div class="card-hdr">
+          <span class="card-title">Actividad reciente</span>
+          <span class="card-badge" id="last-update-2"></span>
         </div>
-        <div id="alertas"><p class="loading">Sin alertas pendientes ✓</p></div>
+        <div id="feed-ventas"><p class="empty-state">Sin ventas aun.</p></div>
       </div>
-      <div class="panel">
-        <div class="panel-hdr">
-          <span class="panel-title">Promociones activas</span>
-          <button class="mini-btn" onclick="analizarPromociones()">Analizar</button>
+
+      <div class="card" style="margin-top:12px">
+        <div class="card-hdr">
+          <span class="card-title">Log del bot</span>
+          <button class="icon-btn" onclick="procesarPreguntas()" title="Procesar preguntas">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+          </button>
         </div>
-        <div id="promociones"><p class="loading">Presioná "Analizar" para ver sugerencias.</p></div>
+        <div id="actividad"><p class="empty-state">Sin actividad.</p></div>
       </div>
     </div>
+
+    <!-- RIGHT: alerts + promotions + AI -->
+    <div class="col-right">
+      <div class="card">
+        <div class="card-hdr">
+          <span class="card-title">Alertas</span>
+          <span id="alert-count" class="badge-count" style="display:none">0</span>
+        </div>
+        <div id="alertas"><p class="empty-state">Sin alertas pendientes</p></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="card-hdr">
+          <span class="card-title">Promociones</span>
+          <button class="icon-btn" onclick="analizarPromociones()" title="Analizar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </button>
+        </div>
+        <div id="promociones"><p class="empty-state">Presiona analizar para ver sugerencias.</p></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="card-hdr">
+          <span class="card-title">Sugerencias IA</span>
+          <button class="icon-btn" onclick="obtenerSugerencias()" title="Generar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </button>
+        </div>
+        <div id="sugerencias"><p class="empty-state">Presiona para recomendaciones.</p></div>
+      </div>
+    </div>
+
   </div>
 
-  <div class="g2">
-    <div class="panel">
-      <div class="panel-hdr">
-        <span class="panel-title">Actividad del bot</span>
-        <button class="mini-btn" onclick="procesarPreguntas()">🔄 Procesar preguntas</button>
-      </div>
-      <div id="actividad"><p class="loading">Sin actividad aún.</p></div>
-    </div>
-    <div class="panel">
-      <div class="panel-hdr">
-        <span class="panel-title">Sugerencias de la IA</span>
-        <button class="mini-btn" onclick="obtenerSugerencias()">✨ Analizar</button>
-      </div>
-      <div id="sugerencias"><p class="loading">Presioná "Analizar" para recomendaciones de negocio.</p></div>
-    </div>
-  </div>
-
+  <!-- VENTAS PENDIENTES -->
   <div id="seccion-pendientes" style="display:none;margin-bottom:20px">
-    <div class="sec-label">⏳ Ventas pendientes - aprobá para pedir en Droppers</div>
+    <div class="sec-label" style="margin-top:8px">Ventas pendientes - aprobacion requerida</div>
     <div id="lista-pendientes"></div>
   </div>
+
 
   <!-- REPORTE DE PUBLICACIONES Y STOCK -->
   <div id="panel-reporte-pub" style="display:none;margin-bottom:28px">
