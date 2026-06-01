@@ -2461,26 +2461,26 @@ def api_reporte_publicaciones():
                 # Costo Droppers con matching mejorado
                 costo = buscar_costo(titulo)
 
-        # Desglose de costos
-        desglose = {}
-        if costo > 0 and precio > 0:
-            # Comision real de ML (lo que ML efectivamente descuenta)
-            tasa_comision = 0.145  # gold_special default
-            comision_ml = round(precio * tasa_comision, 2)
-            recibis_ml = round(precio - comision_ml, 2)
-            ganancia_neta = round(recibis_ml - costo, 2)
-            margen_pct = round(ganancia_neta / precio * 100, 1)
-            desglose = {
-                "costo_droppers": costo,
-                "costo_droppers_pct": round(costo / precio * 100, 1),
-                "comision_ml": comision_ml,
-                "comision_ml_pct": round(tasa_comision * 100, 1),
-                "iva_iibb": 0,
-                "iva_iibb_pct": 0,
-                "recibis_ml": recibis_ml,
-                "ganancia_neta": ganancia_neta,
-                "margen_pct": margen_pct,
-            }
+                # Desglose de costos
+                desglose = {}
+                if costo > 0 and precio > 0:
+                    # Comision real de ML (lo que ML efectivamente descuenta)
+                    tasa_comision = 0.145  # gold_special default
+                    comision_ml = round(precio * tasa_comision, 2)
+                    recibis_ml = round(precio - comision_ml, 2)
+                    ganancia_neta = round(recibis_ml - costo, 2)
+                    margen_pct = round(ganancia_neta / precio * 100, 1)
+                    desglose = {
+                        "costo_droppers": costo,
+                        "costo_droppers_pct": round(costo / precio * 100, 1),
+                        "comision_ml": comision_ml,
+                        "comision_ml_pct": round(tasa_comision * 100, 1),
+                        "iva_iibb": 0,
+                        "iva_iibb_pct": 0,
+                        "recibis_ml": recibis_ml,
+                        "ganancia_neta": ganancia_neta,
+                        "margen_pct": margen_pct,
+                    }
 
                 # Promociones activas
                 promo_activa = False
