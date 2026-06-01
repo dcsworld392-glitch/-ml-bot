@@ -742,6 +742,63 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
   .stats-grid{grid-template-columns:1fr 1fr}
   .dash-grid{grid-template-columns:1fr}
 }
+
+/* =========== FORM ELEMENTS =========== */
+.form-input,.form-select{width:100%;background:var(--c-bg);border:1px solid var(--c-border);border-radius:var(--radius);padding:9px 12px;color:var(--c-text);font-size:13px;font-family:inherit;transition:border-color var(--transition);outline:none}
+.form-input:focus,.form-select:focus{border-color:var(--c-blue)}
+.form-label{display:block;font-size:12px;font-weight:500;color:var(--c-text-2);margin-bottom:6px}
+
+/* =========== BUTTON VARIANTS =========== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid transparent;transition:all var(--transition)}
+.btn-primary{background:var(--c-text);color:#fff}
+.btn-primary:hover{opacity:.85}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.btn-green{background:var(--c-green);color:#fff}
+.btn-green:hover{opacity:.88}
+.btn-blue{background:var(--c-blue);color:#fff}
+.btn-blue:hover{opacity:.88}
+.btn-blue:disabled{opacity:.35;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--c-text-2);border-color:var(--c-border)}
+.btn-ghost:hover{background:var(--c-surface-hover);color:var(--c-text)}
+.btn-full{width:100%}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-icon{width:32px;height:32px;padding:0;border-radius:var(--radius)}
+
+/* =========== STEPPER =========== */
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper-btn{width:36px;height:36px;border-radius:var(--radius);border:1px solid var(--c-border);background:var(--c-bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-text-2);transition:all var(--transition)}
+.stepper-btn:hover{background:var(--c-surface-hover);color:var(--c-text)}
+.stepper-input{flex:1;text-align:center;background:var(--c-bg);border:1px solid var(--c-border);border-radius:var(--radius);padding:8px;font-size:16px;font-weight:600;font-family:inherit;color:var(--c-text)}
+
+/* =========== MODALS =========== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);backdrop-filter:blur(4px);z-index:300;align-items:center;justify-content:center}
+.modal-box{background:var(--c-surface);border-radius:var(--radius-xl);padding:24px;width:460px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-title{font-size:15px;font-weight:600;color:var(--c-text);margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--c-text-3);margin-bottom:16px}
+.modal-footer{display:flex;gap:8px;margin-top:16px}
+
+/* =========== INFO BOX =========== */
+.info-box{background:var(--c-bg);border-radius:var(--radius);padding:10px 12px;font-size:11px;color:var(--c-text-3);line-height:1.6;border:1px solid var(--c-border)}
+.info-box-amber{background:var(--c-amber-bg);border-color:#FDE68A;color:#B45309}
+
+/* =========== PROGRESS BAR =========== */
+.progress-wrap{height:5px;background:var(--c-border);border-radius:3px;overflow:hidden}
+.progress-bar{height:100%;border-radius:3px;transition:width .4s var(--transition)}
+.progress-green{background:var(--c-green)}
+.progress-blue{background:var(--c-blue)}
+
+/* =========== FILTER TABS =========== */
+.filter-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
+.filter-tab{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--c-border);background:transparent;color:var(--c-text-3);font-family:inherit;transition:all var(--transition)}
+.filter-tab:hover{border-color:var(--c-border-strong);color:var(--c-text-2)}
+.filter-tab.active{background:var(--c-text);color:#fff;border-color:var(--c-text)}
+.filter-tab-red{}.filter-tab-red.active{background:var(--c-red);border-color:var(--c-red)}
+.filter-tab-green{}.filter-tab-green.active{background:var(--c-green);border-color:var(--c-green)}
+.filter-tab-amber{}.filter-tab-amber.active{background:var(--c-amber);border-color:var(--c-amber)}
+
+/* =========== SIDEBAR PAGES =========== */
+.page-view{display:none}
+.page-view.active{display:block}
 </style>
 </head>
 <body>
@@ -759,35 +816,35 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
 
     <nav class="sidebar-nav">
       <div class="nav-section">Principal</div>
-      <button class="nav-item active" onclick="showPage('dashboard')">
+      <button class="nav-item active" onclick="navigateTo('dashboard', this)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         Dashboard
       </button>
-      <button class="nav-item" onclick="toggleReportePub()">
+      <button class="nav-item" onclick="navigateTo('publicaciones', this)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Mis publicaciones
       </button>
-      <button class="nav-item" onclick="togglePublicar()">
+      <button class="nav-item" onclick="navigateTo('publicar', this)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         Publicar productos
       </button>
 
       <div class="nav-section">Calidad</div>
-      <button class="nav-item" id="btn-mejorar-calidad" onclick="mejorarCalidad()">
+      <button class="nav-item" id="btn-mejorar-calidad" onclick="navigateTo('calidad', this)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         Mejorar calidad
       </button>
-      <button class="nav-item" onclick="verHistorial()">
+      <button class="nav-item" onclick="navigateTo('historial', this)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Historial reportes
       </button>
 
       <div class="nav-section">Herramientas</div>
-      <button class="nav-item" onclick="procesarPreguntas()">
+      <button class="nav-item" onclick="navigateTo('preguntas', this)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Procesar preguntas
       </button>
-      <button class="nav-item" onclick="obtenerSugerencias()">
+      <button class="nav-item" onclick="navigateTo('sugerencias', this)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         Sugerencias IA
       </button>
@@ -975,10 +1032,10 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
         </div>
         <!-- Filtros -->
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <button onclick="filtrarReporte('todos')" id="fil-todos" class="mini-btn" style="background:#1a1a1a;color:white">Todos</button>
-          <button onclick="filtrarReporte('rojo')" id="fil-rojo" class="mini-btn" style="color:#A32D2D">🔴 Baja calidad</button>
-          <button onclick="filtrarReporte('amarillo')" id="fil-amarillo" class="mini-btn" style="color:#854F0B">🟡 Calidad media</button>
-          <button onclick="filtrarReporte('verde')" id="fil-verde" class="mini-btn" style="color:#3B6D11">🟢 Buena calidad</button>
+          <button onclick="filtrarReporte('todos')" id="fil-todos" class="filter-tab active">Todos</button>
+          <button onclick="filtrarReporte('rojo')" id="fil-rojo" class="filter-tab filter-tab-red">🔴 Baja calidad</button>
+          <button onclick="filtrarReporte('amarillo')" id="fil-amarillo" class="filter-tab filter-tab-amber">🟡 Calidad media</button>
+          <button onclick="filtrarReporte('verde')" id="fil-verde" class="filter-tab filter-tab-green">🟢 Buena calidad</button>
           <button onclick="filtrarReporte('sin_promo')" id="fil-sin-promo" class="mini-btn">Sin promoción</button>
         </div>
         <div id="tabla-publicaciones"></div>
@@ -987,8 +1044,8 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
   </div>
 
   <!-- Modal promoción -->
-  <div id="modal-promo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
-    <div style="background:white;border-radius:12px;padding:24px;width:480px;max-width:90vw">
+  <div id="modal-promo" class="modal-overlay">
+    <div class="modal-box">
       <p style="font-size:14px;font-weight:600;margin-bottom:4px" id="modal-promo-titulo">Generar promoción</p>
       <p style="font-size:12px;color:#666;margin-bottom:14px">Precio actual: <strong id="modal-promo-precio"></strong></p>
       <div id="modal-promo-opciones" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
@@ -1001,14 +1058,14 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
   </div>
 
   <!-- Modal stock -->
-  <div id="modal-stock" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
-    <div style="background:white;border-radius:12px;padding:24px;width:380px;max-width:90vw">
+  <div id="modal-stock" class="modal-overlay">
+    <div class="modal-box" style="width:380px">
       <p style="font-size:14px;font-weight:600;margin-bottom:4px">📦 Actualizar stock</p>
       <p style="font-size:12px;color:#666;margin-bottom:12px" id="modal-stock-titulo"></p>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <button onclick="cambiarStock(-1)" style="width:36px;height:36px;border-radius:8px;border:0.5px solid #e5e3de;background:#F7F6F3;font-size:18px;cursor:pointer">−</button>
+        <button onclick="cambiarStock(-1)" class="stepper-btn">−</button>
         <input type="number" id="modal-stock-valor" value="10" min="1" max="999" style="flex:1;text-align:center;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px;font-size:16px;font-weight:600;font-family:'Inter',sans-serif">
-        <button onclick="cambiarStock(1)" style="width:36px;height:36px;border-radius:8px;border:0.5px solid #e5e3de;background:#F7F6F3;font-size:18px;cursor:pointer">+</button>
+        <button onclick="cambiarStock(1)" class="stepper-btn">+</button>
       </div>
       <div style="display:flex;gap:8px">
         <button onclick="cerrarModalStock()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
@@ -1028,7 +1085,7 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
       <div class="g2" style="margin-bottom:14px">
         <div>
           <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría de Droppers</label>
-          <select id="pub-cat-droppers" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+          <select id="pub-cat-droppers" class="form-select">
             <option value="">Cargando...</option>
           </select>
         </div>
@@ -1061,12 +1118,12 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
         <div class="g2" style="margin-bottom:10px">
           <div>
             <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen mínimo (%)</label>
-            <input type="number" id="pub-margen-min" value="15" min="5" max="50" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <input type="number" id="pub-margen-min" value="15" min="5" max="50" oninput="actualizarMargenLabel()" class="form-select">
             <p style="font-size:10px;color:#999;margin-top:3px">No publicar por debajo de este margen</p>
           </div>
           <div>
             <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen máximo (%)</label>
-            <input type="number" id="pub-margen-max" value="35" min="10" max="80" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <input type="number" id="pub-margen-max" value="35" min="10" max="80" oninput="actualizarMargenLabel()" class="form-select">
             <p style="font-size:10px;color:#999;margin-top:3px">Límite superior de ganancia</p>
           </div>
         </div>
@@ -1076,13 +1133,13 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
         <div class="g2" style="margin-bottom:14px">
           <div>
             <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría en ML</label>
-            <select id="pub-categoria" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <select id="pub-categoria" class="form-select">
               <option value="">Seleccioná...</option>
             </select>
           </div>
           <div>
             <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Estrategia de precio</label>
-            <select id="pub-estrategia" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <select id="pub-estrategia" class="form-select">
               <option value="competitivo">Competitivo (3% bajo competencia)</option>
               <option value="volumen">Volumen (máximo 5% bajo competencia)</option>
               <option value="margen">Margen máximo (ignorar competencia)</option>
@@ -1117,7 +1174,7 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
 
       <!-- Modal asignación masiva de competidor -->
       <div id="modal-comp-masivo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center">
-        <div style="background:white;border-radius:12px;padding:24px;width:480px;max-width:90vw">
+        <div class="modal-box">
           <p style="font-size:14px;font-weight:600;margin-bottom:12px">🎯 Asignar competidor a productos seleccionados</p>
           <p style="font-size:12px;color:#666;margin-bottom:12px">Ingresá el nickname del vendedor en ML. La IA va a fijar precios para competir contra él en los productos seleccionados.</p>
           <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -1198,8 +1255,8 @@ html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(
 
 
 <!-- Modal historial reportes -->
-<div id="modal-historial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
-  <div style="background:white;border-radius:12px;padding:24px;width:560px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column">
+<div id="modal-historial" class="modal-overlay">
+  <div class="modal-box" style="max-height:85vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <p style="font-size:14px;font-weight:600;color:#1a1a1a">📋 Historial de reportes de calidad</p>
       <button onclick="cerrarHistorial()" style="background:none;border:none;color:#999;font-size:18px;cursor:pointer">✕</button>
@@ -2357,12 +2414,63 @@ setInterval(verificarToken, 300000);
 </script>
 
 <script>
+// ===== SPA NAVIGATION =====
+const VIEWS = {
+  dashboard: document.querySelector('.content'),
+};
+
+function navigateTo(page, btn) {
+  // Update sidebar active state
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Update topbar title
+  const titles = {
+    dashboard: 'Dashboard',
+    publicaciones: 'Mis publicaciones',
+    publicar: 'Publicar productos',
+    calidad: 'Mejorar calidad',
+    historial: 'Historial de reportes',
+    preguntas: 'Procesar preguntas',
+    sugerencias: 'Sugerencias IA',
+  };
+  document.querySelector('.page-title').textContent = titles[page] || page;
+
+  // Handle navigation
+  switch(page) {
+    case 'dashboard':
+      // Collapse any open panels
+      document.getElementById('panel-reporte-pub').style.display = 'none';
+      document.getElementById('panel-publicar')?.style && (document.getElementById('panel-publicar').style.display = 'none');
+      break;
+    case 'publicaciones':
+      toggleReportePub();
+      document.getElementById('panel-reporte-pub').scrollIntoView({behavior:'smooth', block:'start'});
+      break;
+    case 'publicar':
+      togglePublicar();
+      document.getElementById('panel-publicar')?.scrollIntoView({behavior:'smooth', block:'start'});
+      break;
+    case 'calidad':
+      mejorarCalidad();
+      break;
+    case 'historial':
+      verHistorial();
+      break;
+    case 'preguntas':
+      procesarPreguntas();
+      break;
+    case 'sugerencias':
+      obtenerSugerencias();
+      break;
+  }
+}
+
 function showPage(page) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  if(event?.currentTarget) event.currentTarget.classList.add('active');
 }
-// Sync both mejorar calidad buttons
-const origMejorar = window.mejorarCalidad;
+
 </script>
 
 </body>
@@ -4847,10 +4955,10 @@ main{max-width:1120px;margin:0 auto;padding:36px 24px}
         </div>
         <!-- Filtros -->
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <button onclick="filtrarReporte('todos')" id="fil-todos" class="mini-btn" style="background:#1a1a1a;color:white">Todos</button>
-          <button onclick="filtrarReporte('rojo')" id="fil-rojo" class="mini-btn" style="color:#A32D2D">🔴 Baja calidad</button>
-          <button onclick="filtrarReporte('amarillo')" id="fil-amarillo" class="mini-btn" style="color:#854F0B">🟡 Calidad media</button>
-          <button onclick="filtrarReporte('verde')" id="fil-verde" class="mini-btn" style="color:#3B6D11">🟢 Buena calidad</button>
+          <button onclick="filtrarReporte('todos')" id="fil-todos" class="filter-tab active">Todos</button>
+          <button onclick="filtrarReporte('rojo')" id="fil-rojo" class="filter-tab filter-tab-red">🔴 Baja calidad</button>
+          <button onclick="filtrarReporte('amarillo')" id="fil-amarillo" class="filter-tab filter-tab-amber">🟡 Calidad media</button>
+          <button onclick="filtrarReporte('verde')" id="fil-verde" class="filter-tab filter-tab-green">🟢 Buena calidad</button>
           <button onclick="filtrarReporte('sin_promo')" id="fil-sin-promo" class="mini-btn">Sin promoción</button>
         </div>
         <div id="tabla-publicaciones"></div>
@@ -4859,8 +4967,8 @@ main{max-width:1120px;margin:0 auto;padding:36px 24px}
   </div>
 
   <!-- Modal promoción -->
-  <div id="modal-promo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
-    <div style="background:white;border-radius:12px;padding:24px;width:480px;max-width:90vw">
+  <div id="modal-promo" class="modal-overlay">
+    <div class="modal-box">
       <p style="font-size:14px;font-weight:600;margin-bottom:4px" id="modal-promo-titulo">Generar promoción</p>
       <p style="font-size:12px;color:#666;margin-bottom:14px">Precio actual: <strong id="modal-promo-precio"></strong></p>
       <div id="modal-promo-opciones" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
@@ -4873,14 +4981,14 @@ main{max-width:1120px;margin:0 auto;padding:36px 24px}
   </div>
 
   <!-- Modal stock -->
-  <div id="modal-stock" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
-    <div style="background:white;border-radius:12px;padding:24px;width:380px;max-width:90vw">
+  <div id="modal-stock" class="modal-overlay">
+    <div class="modal-box" style="width:380px">
       <p style="font-size:14px;font-weight:600;margin-bottom:4px">📦 Actualizar stock</p>
       <p style="font-size:12px;color:#666;margin-bottom:12px" id="modal-stock-titulo"></p>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <button onclick="cambiarStock(-1)" style="width:36px;height:36px;border-radius:8px;border:0.5px solid #e5e3de;background:#F7F6F3;font-size:18px;cursor:pointer">−</button>
+        <button onclick="cambiarStock(-1)" class="stepper-btn">−</button>
         <input type="number" id="modal-stock-valor" value="10" min="1" max="999" style="flex:1;text-align:center;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px;font-size:16px;font-weight:600;font-family:'Inter',sans-serif">
-        <button onclick="cambiarStock(1)" style="width:36px;height:36px;border-radius:8px;border:0.5px solid #e5e3de;background:#F7F6F3;font-size:18px;cursor:pointer">+</button>
+        <button onclick="cambiarStock(1)" class="stepper-btn">+</button>
       </div>
       <div style="display:flex;gap:8px">
         <button onclick="cerrarModalStock()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
@@ -4900,7 +5008,7 @@ main{max-width:1120px;margin:0 auto;padding:36px 24px}
       <div class="g2" style="margin-bottom:14px">
         <div>
           <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría de Droppers</label>
-          <select id="pub-cat-droppers" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+          <select id="pub-cat-droppers" class="form-select">
             <option value="">Cargando...</option>
           </select>
         </div>
@@ -4933,12 +5041,12 @@ main{max-width:1120px;margin:0 auto;padding:36px 24px}
         <div class="g2" style="margin-bottom:10px">
           <div>
             <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen mínimo (%)</label>
-            <input type="number" id="pub-margen-min" value="15" min="5" max="50" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <input type="number" id="pub-margen-min" value="15" min="5" max="50" oninput="actualizarMargenLabel()" class="form-select">
             <p style="font-size:10px;color:#999;margin-top:3px">No publicar por debajo de este margen</p>
           </div>
           <div>
             <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Margen máximo (%)</label>
-            <input type="number" id="pub-margen-max" value="35" min="10" max="80" oninput="actualizarMargenLabel()" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <input type="number" id="pub-margen-max" value="35" min="10" max="80" oninput="actualizarMargenLabel()" class="form-select">
             <p style="font-size:10px;color:#999;margin-top:3px">Límite superior de ganancia</p>
           </div>
         </div>
@@ -4948,13 +5056,13 @@ main{max-width:1120px;margin:0 auto;padding:36px 24px}
         <div class="g2" style="margin-bottom:14px">
           <div>
             <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Categoría en ML</label>
-            <select id="pub-categoria" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <select id="pub-categoria" class="form-select">
               <option value="">Seleccioná...</option>
             </select>
           </div>
           <div>
             <label style="font-size:12px;font-weight:500;display:block;margin-bottom:6px">Estrategia de precio</label>
-            <select id="pub-estrategia" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:13px;font-family:'Inter',sans-serif">
+            <select id="pub-estrategia" class="form-select">
               <option value="competitivo">Competitivo (3% bajo competencia)</option>
               <option value="volumen">Volumen (máximo 5% bajo competencia)</option>
               <option value="margen">Margen máximo (ignorar competencia)</option>
@@ -4989,7 +5097,7 @@ main{max-width:1120px;margin:0 auto;padding:36px 24px}
 
       <!-- Modal asignación masiva de competidor -->
       <div id="modal-comp-masivo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center">
-        <div style="background:white;border-radius:12px;padding:24px;width:480px;max-width:90vw">
+        <div class="modal-box">
           <p style="font-size:14px;font-weight:600;margin-bottom:12px">🎯 Asignar competidor a productos seleccionados</p>
           <p style="font-size:12px;color:#666;margin-bottom:12px">Ingresá el nickname del vendedor en ML. La IA va a fijar precios para competir contra él en los productos seleccionados.</p>
           <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -6142,8 +6250,8 @@ setInterval(verificarToken, 300000);
 </script>
 
 <!-- Modal historial reportes -->
-<div id="modal-historial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
-  <div style="background:white;border-radius:12px;padding:24px;width:560px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column">
+<div id="modal-historial" class="modal-overlay">
+  <div class="modal-box" style="max-height:85vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <p style="font-size:14px;font-weight:600;color:#1a1a1a">📋 Historial de reportes de calidad</p>
       <button onclick="cerrarHistorial()" style="background:none;border:none;color:#999;font-size:18px;cursor:pointer">✕</button>
