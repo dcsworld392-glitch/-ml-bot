@@ -781,7 +781,12 @@ Devolvé SOLO JSON válido:
                 updates["attributes"] = list(attrs_map.values())
 
             if updates:
-                self.ml.put(f"/items/{item_id}", updates)
+                try:
+                    resp_put = self.ml.put(f"/items/{item_id}", updates)
+                    if isinstance(resp_put, dict) and resp_put.get("error"):
+                        return {"ok": False, "item_id": item_id, "error": f"ML rechazó PUT: {resp_put.get('message','')}", "resp": str(resp_put)[:300]}
+                except Exception as e_put:
+                    return {"ok": False, "item_id": item_id, "error": f"Error PUT items: {str(e_put)}"}
 
             # 7. Actualizar descripción
             desc_nueva = mejora.get("descripcion_nueva", "")

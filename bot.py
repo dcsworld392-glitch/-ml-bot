@@ -2643,12 +2643,12 @@ function renderTablaPublicaciones(pubs) {
 
       ${desgloseHtml}
 
-      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center" onclick="event.stopPropagation()">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px" onclick="event.stopPropagation()">
         ${p.calidad_score < 75 ? `<button onclick="mejorarPublicacionIndividual('${p.item_id}', this)" class="btn-apple-primary btn-sm">✨ Mejorar</button>` : '<span style="font-size:11px;color:var(--green-dk);font-weight:500">✅ OK</span>'}
         ${!p.promo_activa ? `<button onclick="abrirModalPromo('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}',${p.precio})" class="btn-apple-primary btn-apple-green btn-sm">🏷️ Promo</button>` : ''}
         <button onclick="verEstrategiaIA('${p.item_id}', this)" class="btn-apple-ghost btn-sm">🧠 IA</button>
         <button onclick="abrirModalStock('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}',${p.stock})" class="btn-apple-ghost btn-sm">📦 Stock</button>
-        <button onclick="abrirDetail('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}');event.stopPropagation()" class="btn-apple-ghost btn-sm" style="margin-left:auto;color:var(--blue)">Detalles →</button>
+        <button onclick="abrirDetail('${p.item_id}','${p.titulo.replace(/'/g,"\\'")}');event.stopPropagation()" class="btn-apple-ghost btn-sm" style="color:var(--blue)">Detalles →</button>
       </div>
       <div id="estrategia-${p.item_id}" style="display:none;margin-top:10px"></div>
     </div>`;
