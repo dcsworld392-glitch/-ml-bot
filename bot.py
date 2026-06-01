@@ -2389,11 +2389,49 @@ def api_reporte_publicaciones():
                 pass
 
         costos_map = {}
+        url_map = {}
         for p in productos_droppers:
             titulo = p.get("titulo", "").lower().strip()
             costo = p.get("costo", 0)
-            if costo > 0 and titulo:
-                costos_map[titulo] = costo
+            url = p.get("url", "")
+            if costo > 0:
+                if titulo:
+                    costos_map[titulo] = costo
+                if url:
+                    # Extraer slug de la URL para matching más robusto
+                    slug = url.rstrip("/").split("/")[-1].replace(".html", "").replace("-", " ")
+                    url_map[slug] = {"costo": costo, "titulo": titulo}
+
+        def buscar_costo(titulo_ml):
+            titulo_lower = titulo_ml.lower().strip()
+            palabras_ml = [w for w in titulo_lower.split() if len(w) > 3]
+
+            # 1. Match exacto
+            if titulo_lower in costos_map:
+                return costos_map[titulo_lower]
+
+            # 2. Match por palabras clave (al menos 3 coincidencias)
+            mejor_score = 0
+            mejor_costo = 0
+            for titulo_drop, costo in costos_map.items():
+                palabras_drop = [w for w in titulo_drop.split() if len(w) > 3]
+                coincidencias = sum(1 for w in palabras_ml if w in titulo_drop)
+                score = coincidencias / max(len(palabras_ml), 1)
+                if score > mejor_score and score >= 0.4:
+                    mejor_score = score
+                    mejor_costo = costo
+
+            if mejor_costo > 0:
+                return mejor_costo
+
+            # 3. Match por slug de URL
+            for slug, data in url_map.items():
+                palabras_slug = slug.split()
+                coincidencias = sum(1 for w in palabras_ml if w in slug)
+                if coincidencias >= 2:
+                    return data["costo"]
+
+            return 0
 
         from costos import CalculadoraCostos
         calc = CalculadoraCostos()
@@ -2429,28 +2467,8 @@ def api_reporte_publicaciones():
                     calidad_label = "Sin datos"
                     score = 0
 
-                # Costo Droppers (cruzar por título con mejor matching)
-                costo = 0
-                titulo_lower = titulo.lower().strip()
-                # Exact match first
-                if titulo_lower in costos_map:
-                    costo = costos_map[titulo_lower]
-                else:
-                    # Fuzzy match - first 4 words
-                    palabras_titulo = titulo_lower.split()[:4]
-                    for key, val in costos_map.items():
-                        palabras_key = key.split()[:4]
-                        coincidencias = sum(1 for w in palabras_titulo if w in palabras_key)
-                        if coincidencias >= 3:
-                            costo = val
-                            break
-                    # If still no match, try 20 char prefix
-                    if not costo:
-                        prefix = titulo_lower[:20]
-                        for key, val in costos_map.items():
-                            if prefix in key or key[:20] in titulo_lower:
-                                costo = val
-                                break
+                # Costo Droppers con matching mejorado
+                costo = buscar_costo(titulo)
 
                 # Desglose de costos
                 desglose = {}
