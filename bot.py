@@ -1415,29 +1415,37 @@ html, body {
     <!-- CONTENT AREA -->
     <div class="content">
 
-      <!-- HERO -->
-      <div class="hero-section">
-        <div class="hero-metric">
-          <div class="hero-label">Ingresos — ultimos 30 dias</div>
-          <div class="hero-value" id="m-30d">$0</div>
-          <div class="hero-delta delta-up" id="m-30d-delta">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
-            <span id="m-30d-v">0 ordenes</span>
-          </div>
+      <!-- KPI ROW -->
+      <div class="hero-row">
+        <div class="kpi">
+          <div class="kpi-label">Hoy</div>
+          <div class="kpi-val up" id="m-hoy">$0</div>
+          <div class="kpi-sub" id="m-hoy-v">0 ventas</div>
         </div>
-        <div class="hero-sub-metrics">
-          <div class="sub-metric">
-            <div class="sub-label">Hoy</div>
-            <div class="sub-value" id="m-hoy" style="color:var(--green-dk)">$0</div>
-          </div>
-          <div class="sub-metric">
-            <div class="sub-label">Ayer</div>
-            <div class="sub-value" id="m-ayer">$0</div>
-          </div>
-          <div class="sub-metric">
-            <div class="sub-label">Ticket</div>
-            <div class="sub-value" id="m-ticket">$0</div>
-          </div>
+        <div class="kpi">
+          <div class="kpi-label">Ayer</div>
+          <div class="kpi-val" id="m-ayer">$0</div>
+          <div class="kpi-sub" id="m-ayer-v">0 ventas</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Ultimos 30 dias</div>
+          <div class="kpi-val" id="m-30d">$0</div>
+          <div class="kpi-sub" id="m-30d-v">0 ordenes</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Ganancia neta 30d</div>
+          <div class="kpi-val up" id="m-gan-30d">$0</div>
+          <div class="kpi-sub">estimada</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Margen</div>
+          <div class="kpi-val warn" id="m-margen">0%</div>
+          <div class="kpi-sub">promedio</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Ticket promedio</div>
+          <div class="kpi-val" id="m-ticket">$0</div>
+          <div class="kpi-sub">por venta</div>
         </div>
       </div>
 
