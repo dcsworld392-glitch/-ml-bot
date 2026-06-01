@@ -553,271 +553,409 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simple's - Panel de Ventas</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simple's</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#F2F2F7;
-  --surface:#FFFFFF;
-  --surface-2:#F5F5F7;
-  --surface-3:#E5E5EA;
-  --sep:rgba(60,60,67,.18);
-  --sep2:#C6C6C8;
-  --t1:#000000;
-  --t2:rgba(60,60,67,.6);
-  --t3:rgba(60,60,67,.3);
-  --t4:rgba(60,60,67,.18);
-  --green:#34C759;--green-bg:rgba(52,199,89,.1);--green-dk:#1A7431;
-  --blue:#007AFF;--blue-bg:rgba(0,122,255,.08);--blue-dk:#0051A8;
-  --orange:#FF9500;--orange-bg:rgba(255,149,0,.08);
-  --red:#FF3B30;--red-bg:rgba(255,59,48,.08);
-  --brand:#4CAF50;--brand-bg:rgba(76,175,80,.1);
-  --r1:8px;--r2:13px;--r3:16px;--r4:100px;
-  --sh1:0 1px 4px rgba(0,0,0,.06),0 0 0 .5px rgba(0,0,0,.05);
-  --sh2:0 4px 20px rgba(0,0,0,.1),0 0 0 .5px rgba(0,0,0,.06);
-  --e:.18s cubic-bezier(.4,0,.2,1);
+  --c-bg:#F7F7F8;
+  --c-surface:#FFFFFF;
+  --c-surface-hover:#F0F0F2;
+  --c-border:#E4E4E7;
+  --c-border-strong:#D4D4D8;
+  --c-text:#09090B;
+  --c-text-2:#52525B;
+  --c-text-3:#A1A1AA;
+  --c-green:#16A34A;
+  --c-green-bg:#F0FDF4;
+  --c-green-border:#BBF7D0;
+  --c-blue:#2563EB;
+  --c-blue-bg:#EFF6FF;
+  --c-amber:#D97706;
+  --c-amber-bg:#FFFBEB;
+  --c-red:#DC2626;
+  --c-red-bg:#FEF2F2;
+  --c-brand:#16A34A;
+  --radius:8px;
+  --radius-lg:12px;
+  --radius-xl:16px;
+  --shadow-xs:0 1px 2px rgba(0,0,0,.05);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+  --transition:150ms cubic-bezier(.4,0,.2,1);
 }
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;-webkit-font-smoothing:antialiased}
-header{background:rgba(242,242,247,.88);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--sep);padding:0 40px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.brand{display:flex;align-items:center;gap:8px}
-.brand-dot{width:8px;height:8px;background:var(--brand);border-radius:50%;box-shadow:0 0 0 2.5px rgba(76,175,80,.18);animation:pulse 3s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(.75);opacity:.5}}
-.brand-name{font-size:15px;font-weight:600;color:var(--t1);letter-spacing:-.3px}
-.brand-apos{color:var(--brand)}
-.hdr-right{display:flex;align-items:center;gap:6px}
-.pill{font-size:11px;font-weight:500;padding:4px 10px;border-radius:var(--r4);text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:opacity var(--e)}
-.pill-green{background:var(--green-bg);color:var(--green-dk);border:.5px solid rgba(52,199,89,.25)}
-.pill-blue{background:var(--blue-bg);color:var(--blue-dk);border:.5px solid rgba(0,122,255,.2);cursor:pointer}
-.pill-blue:hover{background:rgba(0,122,255,.14)}
-.pill-time{background:var(--surface);color:var(--t3);border:.5px solid var(--sep);font-size:10px;font-family:'JetBrains Mono',monospace}
-main{max-width:1080px;margin:0 auto;padding:32px 24px}
-.sec-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
-.mc{background:var(--surface);border-radius:var(--r3);padding:18px 20px;box-shadow:var(--sh1);transition:box-shadow var(--e),transform var(--e)}
-.mc:hover{box-shadow:var(--sh2);transform:translateY(-1px)}
-.mc-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);margin-bottom:10px}
-.mc-val{font-size:26px;font-weight:700;letter-spacing:-1.2px;color:var(--t1);font-variant-numeric:tabular-nums;line-height:1}
-.mc-sub{font-size:11px;color:var(--t3);margin-top:5px}
-.green{color:var(--green-dk)}.blue{color:var(--blue-dk)}.amber{color:#B25000}.red{color:var(--red)}
-.panel{background:var(--surface);border-radius:var(--r3);padding:20px 22px;box-shadow:var(--sh1)}
-.panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.panel-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--t3)}
-.mini-btn{font-size:11px;padding:5px 12px;border-radius:var(--r1);border:.5px solid var(--sep);background:var(--surface-2);color:var(--t2);cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;transition:all var(--e)}
-.mini-btn:hover{background:var(--surface-3);color:var(--t1)}
-.sale-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--sep)}
-.sale-row:last-child{border-bottom:none}
-.sale-thumb{width:38px;height:38px;border-radius:var(--r1);background:var(--surface-2);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--t4);font-size:14px}
-.sale-name{font-size:12px;font-weight:500;color:var(--t1);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
-.sale-meta{font-size:11px;color:var(--t2)}
-.sale-gain{text-align:right;flex-shrink:0}
-.sale-gain-val{font-size:12px;font-weight:600;color:var(--green-dk)}
-.sale-pct{font-size:10px;color:var(--t3)}
-.loading{font-size:12px;color:var(--t3);padding:8px 0}
-.alert-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:.5px solid var(--sep)}
-.alert-row:last-child{border-bottom:none}
-.alert-dot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0}
-.dot-red{background:var(--red)}.dot-amber{background:var(--orange)}.dot-green{background:var(--green)}
-.alert-txt{font-size:12px;font-weight:500;color:var(--t1);margin-bottom:2px}
-.alert-sub{font-size:11px;color:var(--t2)}
-.resolve-btn{font-size:10px;padding:4px 10px;border-radius:var(--r1);border:.5px solid rgba(0,122,255,.25);background:var(--blue-bg);color:var(--blue-dk);cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'Inter',sans-serif;transition:all var(--e)}
-.promo-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:.5px solid var(--sep)}
+html,body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--c-bg);color:var(--c-text);min-height:100vh;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* =========== SIDEBAR =========== */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--c-surface);border-right:1px solid var(--c-border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50;padding:0}
+.sidebar-logo{padding:20px 16px 16px;border-bottom:1px solid var(--c-border)}
+.logo-inner{display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--c-brand);flex-shrink:0;animation:breathe 3s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.4}}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:-.3px;color:var(--c-text)}
+.logo-apos{color:var(--c-brand)}
+.sidebar-nav{padding:12px 10px;flex:1;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--c-text-3);padding:0 6px;margin-bottom:6px;margin-top:16px}
+.nav-section:first-child{margin-top:0}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;color:var(--c-text-2);text-decoration:none;transition:all var(--transition);border:none;background:none;width:100%;font-family:inherit}
+.nav-item:hover{background:var(--c-surface-hover);color:var(--c-text)}
+.nav-item.active{background:#F0FDF4;color:var(--c-green);font-weight:600}
+.nav-item svg{opacity:.6;flex-shrink:0}
+.nav-item.active svg{opacity:1}
+.nav-badge{margin-left:auto;background:var(--c-red-bg);color:var(--c-red);font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px}
+.sidebar-footer{padding:12px 10px;border-top:1px solid var(--c-border)}
+.status-row{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:var(--radius);background:var(--c-green-bg);cursor:pointer}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--c-brand);animation:breathe 3s ease-in-out infinite}
+.status-text{font-size:11px;font-weight:600;color:var(--c-green)}
+.status-meta{font-size:10px;color:var(--c-text-3);margin-left:auto}
+
+/* =========== MAIN =========== */
+.main{margin-left:220px;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--c-surface);border-bottom:1px solid var(--c-border);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar-left{display:flex;align-items:center;gap:8px}
+.page-title{font-size:15px;font-weight:600;letter-spacing:-.2px;color:var(--c-text)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.topbar-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid transparent;cursor:pointer;transition:all var(--transition)}
+.pill-outline{background:transparent;border-color:var(--c-border);color:var(--c-text-2)}
+.pill-outline:hover{border-color:var(--c-border-strong);color:var(--c-text)}
+.time-badge{font-size:11px;color:var(--c-text-3);font-variant-numeric:tabular-nums}
+
+.content{padding:24px 28px;flex:1}
+
+/* =========== HERO METRIC =========== */
+.hero-section{margin-bottom:20px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.hero-metric{flex:1}
+.hero-label{font-size:12px;font-weight:500;color:var(--c-text-3);margin-bottom:4px}
+.hero-value{font-size:42px;font-weight:700;letter-spacing:-2px;color:var(--c-text);font-variant-numeric:tabular-nums;line-height:1}
+.hero-delta{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;margin-top:6px;padding:2px 8px;border-radius:20px}
+.delta-up{background:var(--c-green-bg);color:var(--c-green)}
+.delta-flat{background:var(--c-amber-bg);color:var(--c-amber)}
+.hero-sub-metrics{display:flex;gap:20px;align-items:flex-end}
+.sub-metric{text-align:right}
+.sub-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--c-text-3);margin-bottom:3px}
+.sub-value{font-size:20px;font-weight:600;letter-spacing:-.8px;color:var(--c-text);font-variant-numeric:tabular-nums}
+
+/* =========== STAT CARDS =========== */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius-lg);padding:16px 18px;transition:all var(--transition)}
+.stat-card:hover{border-color:var(--c-border-strong);box-shadow:var(--shadow-sm)}
+.stat-label{font-size:11px;font-weight:500;color:var(--c-text-3);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.stat-value{font-size:22px;font-weight:700;letter-spacing:-.8px;color:var(--c-text);font-variant-numeric:tabular-nums}
+.stat-sub{font-size:11px;color:var(--c-text-3);margin-top:4px}
+.stat-green .stat-value{color:var(--c-green)}
+.stat-blue .stat-value{color:var(--c-blue)}
+.stat-amber .stat-value{color:var(--c-amber)}
+
+/* =========== GRID LAYOUT =========== */
+.dash-grid{display:grid;grid-template-columns:1fr 320px;gap:12px;margin-bottom:20px}
+
+/* =========== CARDS =========== */
+.card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius-lg);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--c-border)}
+.card-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--c-text-3)}
+.card-body{padding:14px 18px}
+.card-action{background:none;border:1px solid var(--c-border);padding:4px 10px;border-radius:var(--radius);font-size:11px;font-weight:500;color:var(--c-text-2);cursor:pointer;font-family:inherit;transition:all var(--transition)}
+.card-action:hover{background:var(--c-surface-hover);color:var(--c-text)}
+
+/* =========== ROWS =========== */
+.item-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--c-border)}
+.item-row:last-child{border-bottom:none}
+.item-thumb{width:36px;height:36px;border-radius:var(--radius);background:var(--c-surface-hover);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--c-text-3);font-size:13px}
+.item-name{font-size:13px;font-weight:500;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.item-meta{font-size:11px;color:var(--c-text-3)}
+.item-value{margin-left:auto;text-align:right;flex-shrink:0}
+.item-val-main{font-size:13px;font-weight:600;color:var(--c-green);font-variant-numeric:tabular-nums}
+.item-val-sub{font-size:10px;color:var(--c-text-3)}
+
+.alert-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--c-border)}
+.alert-item:last-child{border-bottom:none}
+.alert-indicator{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.ind-red{background:var(--c-red)}.ind-amber{background:var(--c-amber)}.ind-green{background:var(--c-green)}
+.alert-title{font-size:12px;font-weight:500;color:var(--c-text)}
+.alert-desc{font-size:11px;color:var(--c-text-3);margin-top:1px}
+.alert-btn{font-size:10px;padding:3px 8px;border-radius:var(--radius);border:1px solid var(--c-blue-bg);background:var(--c-blue-bg);color:var(--c-blue);cursor:pointer;white-space:nowrap;font-family:inherit;margin-left:auto;flex-shrink:0;transition:all var(--transition)}
+
+.log-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--c-border);font-size:12px}
+.log-row:last-child{border-bottom:none}
+.log-time{font-size:10px;color:var(--c-text-3);min-width:36px;margin-top:2px;font-variant-numeric:tabular-nums}
+.log-dot{width:4px;height:4px;border-radius:50%;background:var(--c-blue);margin-top:5px;flex-shrink:0}
+.log-text{color:var(--c-text-2);line-height:1.4}
+
+.sug-item{padding:10px 0;border-bottom:1px solid var(--c-border)}
+.sug-item:last-child{border-bottom:none}
+.sug-title{font-size:12px;font-weight:600;color:var(--c-text);margin-bottom:2px}
+.sug-desc{font-size:11px;color:var(--c-text-3);line-height:1.5}
+.sug-tag{display:inline-block;font-size:10px;font-weight:500;padding:1px 7px;border-radius:20px;margin-top:5px}
+.tag-high{background:var(--c-red-bg);color:var(--c-red)}.tag-mid{background:var(--c-amber-bg);color:var(--c-amber)}.tag-low{background:var(--c-surface-hover);color:var(--c-text-3)}
+
+/* =========== PENDING =========== */
+.pending-banner{background:var(--c-amber-bg);border:1px solid #FDE68A;border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:12px}
+.pending-title{font-size:13px;font-weight:600;color:#92400E;margin-bottom:3px}
+.pending-desc{font-size:12px;color:#B45309;line-height:1.5;margin-bottom:10px}
+.btn-confirm{background:var(--c-green);color:#fff;border:none;padding:7px 14px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity var(--transition)}
+.btn-confirm:hover{opacity:.88}
+.btn-skip{background:transparent;border:1px solid #FDE68A;color:#B45309;padding:7px 12px;border-radius:var(--radius);font-size:12px;cursor:pointer;font-family:inherit;margin-left:6px}
+
+/* =========== PROMO ROW =========== */
+.promo-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--c-border)}
 .promo-row:last-child{border-bottom:none}
-.badge-off{background:var(--red-bg);color:var(--red);font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;flex-shrink:0}
-.badge-ok{background:var(--green-bg);color:var(--green-dk);font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;flex-shrink:0}
-.pending-card{background:var(--orange-bg);border:.5px solid rgba(255,149,0,.25);border-radius:var(--r2);padding:16px 18px;margin-bottom:10px}
-.pending-title{font-size:12px;font-weight:600;color:#B25000;margin-bottom:4px}
-.pending-meta{font-size:11px;color:rgba(178,80,0,.7);margin-bottom:12px;line-height:1.6}
-.btn-approve{background:var(--green);color:#fff;border:none;padding:7px 16px;border-radius:var(--r1);font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity var(--e)}
-.btn-approve:hover{opacity:.85}
-.btn-ignore{background:transparent;color:var(--orange);border:.5px solid rgba(255,149,0,.3);padding:7px 12px;border-radius:var(--r1);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif}
-.log-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:.5px solid var(--sep);font-size:11px}
-.log-item:last-child{border-bottom:none}
-.log-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3);min-width:38px;margin-top:1px}
-.log-dot-sm{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:4px;flex-shrink:0}
-.sug-item{background:var(--surface-2);border-radius:var(--r2);padding:14px 16px;margin-bottom:8px}
-.sug-title{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:3px}
-.sug-desc{font-size:11px;color:var(--t2);line-height:1.6;margin-bottom:8px}
-.tag{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:500}
-.tag-alto{background:var(--red-bg);color:var(--red)}.tag-medio{background:var(--orange-bg);color:#B25000}.tag-bajo{background:var(--surface-2);color:var(--t3)}
-.cycle-btn{background:var(--t1);color:#fff;border:none;padding:10px 22px;border-radius:var(--r4);font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;position:relative;overflow:hidden;transition:opacity var(--e),transform var(--e);letter-spacing:-.15px}
-.cycle-btn:hover{opacity:.82}
-.cycle-btn:active{transform:scale(.97)}
-.apple-loading{position:relative;overflow:hidden}
-.apple-loading::after{content:'';position:absolute;bottom:0;left:-60%;height:2px;width:60%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);animation:appleBar 1.4s cubic-bezier(.4,0,.2,1) infinite}
-@keyframes appleBar{0%{left:-60%}100%{left:110%}}
-::-webkit-scrollbar{width:5px;height:5px}
+.badge-active{background:var(--c-green-bg);color:var(--c-green);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;flex-shrink:0}
+.badge-inactive{background:var(--c-red-bg);color:var(--c-red);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;flex-shrink:0}
+
+/* =========== ACTION BAR =========== */
+.action-bar{background:var(--c-surface);border-top:1px solid var(--c-border);padding:14px 28px;display:flex;align-items:center;gap:8px;position:sticky;bottom:0;z-index:40}
+.action-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid transparent;transition:all var(--transition);position:relative;overflow:hidden}
+.action-btn-primary{background:var(--c-text);color:#fff;border-color:var(--c-text)}
+.action-btn-primary:hover{opacity:.85}
+.action-btn-secondary{background:var(--c-surface);color:var(--c-text-2);border-color:var(--c-border)}
+.action-btn-secondary:hover{background:var(--c-surface-hover);color:var(--c-text);border-color:var(--c-border-strong)}
+.action-btn-green{background:var(--c-green);color:#fff;border-color:var(--c-green)}
+.action-btn-green:hover{opacity:.88}
+
+/* =========== EMPTY STATE =========== */
+.empty{font-size:12px;color:var(--c-text-3);padding:8px 0}
+
+/* =========== MISC =========== */
+.pill-micro{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:3px}
+.pill-green-m{background:var(--c-green-bg);color:var(--c-green)}
+.pill-blue-m{background:var(--c-blue-bg);color:var(--c-blue)}
+.token-pill{cursor:pointer}
+::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--sep2);border-radius:3px}
-@media(max-width:768px){.g4{grid-template-columns:1fr 1fr}.g2,.g3{grid-template-columns:1fr}main{padding:20px 16px}header{padding:0 20px}}
+::-webkit-scrollbar-thumb{background:var(--c-border-strong);border-radius:2px}
 
-/* NAV BUTTONS */
-.nav-btn{background:none;border:none;font-size:13px;font-weight:500;color:var(--t2);cursor:pointer;padding:6px 12px;border-radius:var(--r1);font-family:'Inter',sans-serif;transition:all var(--e)}
-.nav-btn:hover{background:var(--surface-3);color:var(--t1)}
+/* =========== APPLE LOADING =========== */
+.apple-loading{position:relative;overflow:hidden}
+.apple-loading::after{content:'';position:absolute;bottom:0;left:-60%;height:2px;width:60%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);animation:appleBar 1.4s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes appleBar{0%{left:-60%}100%{left:110%}}
 
-/* STATUS DOT */
-.status-dot{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;cursor:pointer;padding:4px 10px;border-radius:var(--r4)}
-.green-dot{background:var(--green-bg);color:var(--green-dk)}
-.dot-pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 3s ease-in-out infinite}
+/* =========== LOADING TEXT =========== */
+.loading{font-size:12px;color:var(--c-text-3);font-style:italic}
 
-/* KPI ROW */
-.kpi-row{display:flex;align-items:center;background:var(--surface);border-radius:var(--r3);box-shadow:var(--sh1);padding:20px 32px;margin-bottom:20px;gap:0}
-.kpi{flex:1;text-align:center}
-.kpi-div{width:1px;height:36px;background:var(--sep);flex-shrink:0}
-.kpi-label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);margin-bottom:6px}
-.kpi-val{display:block;font-size:22px;font-weight:700;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1}
-.kpi-sub{display:block;font-size:10px;color:var(--t3);margin-top:4px}
-
-/* MAIN GRID */
-.main-grid{display:grid;grid-template-columns:1fr 360px;gap:12px;margin-bottom:20px}
-.col-left,.col-right{display:flex;flex-direction:column}
-
-/* CARDS */
-.card{background:var(--surface);border-radius:var(--r3);padding:18px 20px;box-shadow:var(--sh1)}
-.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--t3)}
-.card-badge{font-size:10px;color:var(--t3)}
-.badge-count{background:var(--red-bg);color:var(--red);font-size:10px;font-weight:700;padding:1px 7px;border-radius:var(--r4);min-width:20px;text-align:center}
-
-/* ICON BUTTONS */
-.icon-btn{background:var(--surface-2);border:.5px solid var(--sep);border-radius:var(--r1);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all var(--e);flex-shrink:0}
-.icon-btn:hover{background:var(--surface-3);color:var(--t1)}
-
-/* EMPTY STATE */
-.empty-state{font-size:12px;color:var(--t3);padding:6px 0}
-
-@media(max-width:900px){.main-grid{grid-template-columns:1fr}.kpi-row{flex-wrap:wrap;gap:12px}.kpi-div{display:none}}
+/* =========== RESPONSIVE =========== */
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .main{margin-left:0}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .dash-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<header>
-  <div class="brand">
-    <div class="brand-dot"></div>
-    <span class="brand-name">Simple<span class="brand-apos">'</span>s</span>
-  </div>
-  <nav style="display:flex;align-items:center;gap:6px">
-    <button onclick="toggleReportePub()" class="nav-btn">Publicaciones</button>
-    <button onclick="togglePublicar()" class="nav-btn">Publicar</button>
-    <button onclick="verHistorial()" class="nav-btn">Reportes</button>
-  </nav>
-  <div class="hdr-right">
-    <span id="token-estado" class="status-dot green-dot" onclick="verEstadoToken()" title="Token ML activo">
-      <span class="dot-pulse"></span>Bot activo
-    </span>
-    <span class="pill pill-time" id="last-update">--:--</span>
-  </div>
-</header>
+<div class="layout">
 
-<main>
-
-  <!-- KPI ROW: 6 metrics in one line -->
-  <div class="kpi-row">
-    <div class="kpi">
-      <span class="kpi-label">Ingresos hoy</span>
-      <span class="kpi-val green" id="m-hoy">$0</span>
-      <span class="kpi-sub" id="m-hoy-v">0 ventas</span>
-    </div>
-    <div class="kpi-div"></div>
-    <div class="kpi">
-      <span class="kpi-label">Ayer</span>
-      <span class="kpi-val" id="m-ayer">$0</span>
-      <span class="kpi-sub" id="m-ayer-v">0 ventas</span>
-    </div>
-    <div class="kpi-div"></div>
-    <div class="kpi">
-      <span class="kpi-label">30 dias</span>
-      <span class="kpi-val blue" id="m-30d">$0</span>
-      <span class="kpi-sub" id="m-30d-v">0 ordenes</span>
-    </div>
-    <div class="kpi-div"></div>
-    <div class="kpi">
-      <span class="kpi-label">Ganancia neta</span>
-      <span class="kpi-val green" id="m-gan-30d">$0</span>
-      <span class="kpi-sub">30 dias</span>
-    </div>
-    <div class="kpi-div"></div>
-    <div class="kpi">
-      <span class="kpi-label">Margen</span>
-      <span class="kpi-val amber" id="m-margen">0%</span>
-      <span class="kpi-sub">promedio</span>
-    </div>
-    <div class="kpi-div"></div>
-    <div class="kpi">
-      <span class="kpi-label">Ticket</span>
-      <span class="kpi-val" id="m-ticket">$0</span>
-      <span class="kpi-sub">por venta</span>
-    </div>
-  </div>
-
-  <!-- MAIN GRID: left column + right column -->
-  <div class="main-grid">
-
-    <!-- LEFT: activity feed + pending -->
-    <div class="col-left">
-      <div class="card">
-        <div class="card-hdr">
-          <span class="card-title">Actividad reciente</span>
-          <span class="card-badge" id="last-update-2"></span>
-        </div>
-        <div id="feed-ventas"><p class="empty-state">Sin ventas aun.</p></div>
-      </div>
-
-      <div class="card" style="margin-top:12px">
-        <div class="card-hdr">
-          <span class="card-title">Log del bot</span>
-          <button class="icon-btn" onclick="procesarPreguntas()" title="Procesar preguntas">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
-          </button>
-        </div>
-        <div id="actividad"><p class="empty-state">Sin actividad.</p></div>
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-inner">
+        <div class="logo-dot"></div>
+        <span class="logo-text">Simple<span class="logo-apos">'</span>s</span>
       </div>
     </div>
 
-    <!-- RIGHT: alerts + promotions + AI -->
-    <div class="col-right">
-      <div class="card">
-        <div class="card-hdr">
-          <span class="card-title">Alertas</span>
-          <span id="alert-count" class="badge-count" style="display:none">0</span>
-        </div>
-        <div id="alertas"><p class="empty-state">Sin alertas pendientes</p></div>
-      </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <button class="nav-item active" onclick="showPage('dashboard')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" onclick="toggleReportePub()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Mis publicaciones
+      </button>
+      <button class="nav-item" onclick="togglePublicar()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Publicar productos
+      </button>
 
-      <div class="card" style="margin-top:12px">
-        <div class="card-hdr">
-          <span class="card-title">Promociones</span>
-          <button class="icon-btn" onclick="analizarPromociones()" title="Analizar">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          </button>
-        </div>
-        <div id="promociones"><p class="empty-state">Presiona analizar para ver sugerencias.</p></div>
-      </div>
+      <div class="nav-section">Calidad</div>
+      <button class="nav-item" id="btn-mejorar-calidad" onclick="mejorarCalidad()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Mejorar calidad
+      </button>
+      <button class="nav-item" onclick="verHistorial()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Historial reportes
+      </button>
 
-      <div class="card" style="margin-top:12px">
-        <div class="card-hdr">
-          <span class="card-title">Sugerencias IA</span>
-          <button class="icon-btn" onclick="obtenerSugerencias()" title="Generar">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          </button>
-        </div>
-        <div id="sugerencias"><p class="empty-state">Presiona para recomendaciones.</p></div>
+      <div class="nav-section">Herramientas</div>
+      <button class="nav-item" onclick="procesarPreguntas()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Procesar preguntas
+      </button>
+      <button class="nav-item" onclick="obtenerSugerencias()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Sugerencias IA
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="status-row" id="token-estado" onclick="verEstadoToken()" title="Token ML">
+        <div class="status-dot"></div>
+        <span class="status-text">Bot activo</span>
+        <span class="status-meta" id="last-update">--:--</span>
       </div>
     </div>
+  </aside>
 
-  </div>
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="main">
 
-  <!-- VENTAS PENDIENTES -->
-  <div id="seccion-pendientes" style="display:none;margin-bottom:20px">
-    <div class="sec-label" style="margin-top:8px">Ventas pendientes - aprobacion requerida</div>
-    <div id="lista-pendientes"></div>
-  </div>
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="page-title">Dashboard</span>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-pill pill-outline" onclick="cicloCompleto()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+          Ejecutar ciclo
+        </button>
+        <button class="topbar-pill pill-outline" onclick="analizarPromociones()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          Promociones
+        </button>
+      </div>
+    </header>
 
+    <!-- CONTENT AREA -->
+    <div class="content">
+
+      <!-- HERO -->
+      <div class="hero-section">
+        <div class="hero-metric">
+          <div class="hero-label">Ingresos — ultimos 30 dias</div>
+          <div class="hero-value" id="m-30d">$0</div>
+          <div class="hero-delta delta-up" id="m-30d-delta">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+            <span id="m-30d-v">0 ordenes</span>
+          </div>
+        </div>
+        <div class="hero-sub-metrics">
+          <div class="sub-metric">
+            <div class="sub-label">Hoy</div>
+            <div class="sub-value" id="m-hoy" style="color:var(--c-green)">$0</div>
+          </div>
+          <div class="sub-metric">
+            <div class="sub-label">Ayer</div>
+            <div class="sub-value" id="m-ayer">$0</div>
+          </div>
+          <div class="sub-metric">
+            <div class="sub-label">Ticket</div>
+            <div class="sub-value" id="m-ticket">$0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAT CARDS -->
+      <div class="stats-grid">
+        <div class="stat-card stat-green">
+          <div class="stat-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Ganancia neta hoy
+          </div>
+          <div class="stat-value" id="m-gan-hoy">$0</div>
+          <div class="stat-sub">despues de comisiones</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Ganancia ayer
+          </div>
+          <div class="stat-value" id="m-gan-ayer">$0</div>
+          <div class="stat-sub">neto</div>
+        </div>
+        <div class="stat-card stat-blue">
+          <div class="stat-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Ganancia 30 dias
+          </div>
+          <div class="stat-value" id="m-gan-30d">$0</div>
+          <div class="stat-sub">acumulado</div>
+        </div>
+        <div class="stat-card stat-amber">
+          <div class="stat-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Margen promedio
+          </div>
+          <div class="stat-value" id="m-margen">0%</div>
+          <div class="stat-sub">estimado</div>
+        </div>
+      </div>
+
+      <!-- MAIN GRID -->
+      <div class="dash-grid">
+
+        <!-- LEFT COLUMN -->
+        <div>
+          <!-- Ventas recientes -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-header">
+              <span class="card-title">Ventas recientes</span>
+              <span class="time-badge" id="last-update-2">actualiza cada 30s</span>
+            </div>
+            <div class="card-body">
+              <div id="feed-ventas"><p class="empty">Sin ventas aun. Aparecen aca en tiempo real.</p></div>
+            </div>
+          </div>
+
+          <!-- Actividad -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Actividad del bot</span>
+            </div>
+            <div class="card-body">
+              <div id="actividad"><p class="empty">Sin actividad.</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div>
+          <!-- Alertas -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-header">
+              <span class="card-title">Alertas</span>
+            </div>
+            <div class="card-body">
+              <div id="alertas"><p class="empty">Sin alertas pendientes</p></div>
+            </div>
+          </div>
+
+          <!-- Promociones -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-header">
+              <span class="card-title">Promociones</span>
+              <button class="card-action" onclick="analizarPromociones()">Analizar</button>
+            </div>
+            <div class="card-body">
+              <div id="promociones"><p class="empty">Presiona analizar.</p></div>
+            </div>
+          </div>
+
+          <!-- Sugerencias -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Sugerencias IA</span>
+              <button class="card-action" onclick="obtenerSugerencias()">Generar</button>
+            </div>
+            <div class="card-body">
+              <div id="sugerencias"><p class="empty">Presiona para recomendaciones.</p></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- VENTAS PENDIENTES -->
+      <div id="seccion-pendientes" style="display:none;margin-bottom:20px">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--c-text-3);margin-bottom:10px">Ventas pendientes</div>
+        <div id="lista-pendientes"></div>
+      </div>
 
   <!-- REPORTE DE PUBLICACIONES Y STOCK -->
   <div id="panel-reporte-pub" style="display:none;margin-bottom:28px">
@@ -1028,6 +1166,93 @@ main{max-width:1080px;margin:0 auto;padding:32px 24px}
     <button class="cycle-btn" style="background:#3B6D11" onclick="verHistorial()">📋 Historial de reportes</button>
   </div>
 </main>
+
+
+    </div><!-- /content -->
+
+    <!-- ACTION BAR -->
+    <footer class="action-bar">
+      <button class="action-btn action-btn-primary" onclick="cicloCompleto()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+        Ejecutar ciclo
+      </button>
+      <button class="action-btn action-btn-green apple-loading" id="btn-mejorar-calidad-bar" onclick="mejorarCalidad()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Mejorar calidad
+      </button>
+      <button class="action-btn action-btn-secondary" onclick="verHistorial()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Historial
+      </button>
+      <div id="btn-descargar-reporte" style="display:none">
+        <a href="/api/reporte-calidad-pdf" target="_blank" class="action-btn action-btn-secondary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          PDF
+        </a>
+      </div>
+    </footer>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+
+
+<!-- Modal historial reportes -->
+<div id="modal-historial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:12px;padding:24px;width:560px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <p style="font-size:14px;font-weight:600;color:#1a1a1a">📋 Historial de reportes de calidad</p>
+      <button onclick="cerrarHistorial()" style="background:none;border:none;color:#999;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="date" id="hist-fecha-desde" onchange="filtrarHistorial()"
+        style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;color:#1a1a1a">
+      <input type="date" id="hist-fecha-hasta" onchange="filtrarHistorial()"
+        style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;color:#1a1a1a">
+      <button onclick="limpiarFiltros()" class="mini-btn">Limpiar</button>
+    </div>
+    <div id="historial-lista" style="overflow-y:auto;flex:1"><p style="font-size:12px;color:#999">Cargando...</p></div>
+  </div>
+</div>
+
+<!-- Panel lateral mejora calidad -->
+<div id="modal-mejora" style="display:none;position:fixed;bottom:24px;right:24px;width:380px;background:white;border-radius:12px;padding:20px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.15);border:0.5px solid #e5e3de">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <p style="font-size:13px;font-weight:600;color:#1a1a1a">✨ Mejorando calidad</p>
+    <button onclick="cerrarModalMejora()" style="background:none;border:none;color:#999;font-size:16px;cursor:pointer;padding:0;line-height:1">✕</button>
+  </div>
+  <div style="height:6px;background:#e5e3de;border-radius:3px;overflow:hidden;margin-bottom:8px">
+    <div id="mejora-barra" style="height:100%;background:#185FA5;border-radius:3px;transition:width .5s;width:0%"></div>
+  </div>
+  <p id="mejora-txt" style="font-size:11px;color:#666;margin-bottom:4px">Iniciando...</p>
+  <p id="mejora-producto" style="font-size:11px;color:#185FA5;font-weight:500;margin-bottom:8px;min-height:16px;line-height:1.4"></p>
+  <p id="mejora-resultado" style="font-size:12px;font-weight:600;color:#3B6D11;min-height:18px"></p>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button onclick="cerrarModalMejora()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:7px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif">Minimizar</button>
+    <a id="btn-descargar-reporte" href="/api/reporte-calidad-pdf" target="_blank" style="flex:1;background:#1a1a1a;color:#fff;padding:7px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:none">📄 Descargar PDF</a>
+    <button onclick="verHistorial()" style="flex:1;background:#185FA5;color:#fff;border:none;padding:7px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;display:none" id="btn-ver-historial">📋 Historial</button>
+  </div>
+</div>
+
+<!-- Modal token -->
+<div id="modal-token" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:12px;padding:24px;width:460px;max-width:90vw">
+    <p style="font-size:14px;font-weight:600;margin-bottom:8px">🔑 Actualizar token de Mercado Libre</p>
+    <p style="font-size:12px;color:#666;margin-bottom:12px">El token expira cada 6 horas. Para renovarlo:</p>
+    <ol style="font-size:12px;color:#666;margin-bottom:12px;padding-left:16px;line-height:1.8">
+      <li>Abrí este link: <a href="https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=7554500472334410&redirect_uri=https://httpbin.org/get" target="_blank" style="color:#185FA5">Autorizar app ML</a></li>
+      <li>Iniciá sesión con tu cuenta</li>
+      <li>Copiá el código <strong>TG-...</strong> de la URL</li>
+      <li>Pegalo acá abajo</li>
+    </ol>
+    <input type="text" id="token-code-input" placeholder="TG-xxxxxxxxxxxxxxxx-211711561" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:12px;font-family:'Inter',sans-serif;margin-bottom:8px;box-sizing:border-box">
+    <div id="token-result" style="min-height:20px;margin-bottom:12px;font-size:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="cerrarModalToken()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
+      <button id="btn-actualizar-token" onclick="actualizarTokenManual()" style="flex:2;background:#1a1a1a;color:#fff;border:none;padding:9px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">Actualizar token</button>
+    </div>
+  </div>
+</div>
 
 <script>
 let pubCategorias = [];
@@ -2131,62 +2356,15 @@ setInterval(()=>{cargarMetricas();cargarActividad();cargarPendientes();},30000);
 setInterval(verificarToken, 300000);
 </script>
 
-<!-- Modal historial reportes -->
-<div id="modal-historial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center">
-  <div style="background:white;border-radius:12px;padding:24px;width:560px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <p style="font-size:14px;font-weight:600;color:#1a1a1a">📋 Historial de reportes de calidad</p>
-      <button onclick="cerrarHistorial()" style="background:none;border:none;color:#999;font-size:18px;cursor:pointer">✕</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <input type="date" id="hist-fecha-desde" onchange="filtrarHistorial()"
-        style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;color:#1a1a1a">
-      <input type="date" id="hist-fecha-hasta" onchange="filtrarHistorial()"
-        style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;color:#1a1a1a">
-      <button onclick="limpiarFiltros()" class="mini-btn">Limpiar</button>
-    </div>
-    <div id="historial-lista" style="overflow-y:auto;flex:1"><p style="font-size:12px;color:#999">Cargando...</p></div>
-  </div>
-</div>
+<script>
+function showPage(page) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+// Sync both mejorar calidad buttons
+const origMejorar = window.mejorarCalidad;
+</script>
 
-<!-- Panel lateral mejora calidad -->
-<div id="modal-mejora" style="display:none;position:fixed;bottom:24px;right:24px;width:380px;background:white;border-radius:12px;padding:20px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.15);border:0.5px solid #e5e3de">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <p style="font-size:13px;font-weight:600;color:#1a1a1a">✨ Mejorando calidad</p>
-    <button onclick="cerrarModalMejora()" style="background:none;border:none;color:#999;font-size:16px;cursor:pointer;padding:0;line-height:1">✕</button>
-  </div>
-  <div style="height:6px;background:#e5e3de;border-radius:3px;overflow:hidden;margin-bottom:8px">
-    <div id="mejora-barra" style="height:100%;background:#185FA5;border-radius:3px;transition:width .5s;width:0%"></div>
-  </div>
-  <p id="mejora-txt" style="font-size:11px;color:#666;margin-bottom:4px">Iniciando...</p>
-  <p id="mejora-producto" style="font-size:11px;color:#185FA5;font-weight:500;margin-bottom:8px;min-height:16px;line-height:1.4"></p>
-  <p id="mejora-resultado" style="font-size:12px;font-weight:600;color:#3B6D11;min-height:18px"></p>
-  <div style="display:flex;gap:8px;margin-top:12px">
-    <button onclick="cerrarModalMejora()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:7px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif">Minimizar</button>
-    <a id="btn-descargar-reporte" href="/api/reporte-calidad-pdf" target="_blank" style="flex:1;background:#1a1a1a;color:#fff;padding:7px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:none">📄 Descargar PDF</a>
-    <button onclick="verHistorial()" style="flex:1;background:#185FA5;color:#fff;border:none;padding:7px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;display:none" id="btn-ver-historial">📋 Historial</button>
-  </div>
-</div>
-
-<!-- Modal token -->
-<div id="modal-token" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div style="background:white;border-radius:12px;padding:24px;width:460px;max-width:90vw">
-    <p style="font-size:14px;font-weight:600;margin-bottom:8px">🔑 Actualizar token de Mercado Libre</p>
-    <p style="font-size:12px;color:#666;margin-bottom:12px">El token expira cada 6 horas. Para renovarlo:</p>
-    <ol style="font-size:12px;color:#666;margin-bottom:12px;padding-left:16px;line-height:1.8">
-      <li>Abrí este link: <a href="https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=7554500472334410&redirect_uri=https://httpbin.org/get" target="_blank" style="color:#185FA5">Autorizar app ML</a></li>
-      <li>Iniciá sesión con tu cuenta</li>
-      <li>Copiá el código <strong>TG-...</strong> de la URL</li>
-      <li>Pegalo acá abajo</li>
-    </ol>
-    <input type="text" id="token-code-input" placeholder="TG-xxxxxxxxxxxxxxxx-211711561" style="width:100%;background:#F7F6F3;border:0.5px solid #e5e3de;border-radius:8px;padding:9px 12px;color:#1a1a1a;font-size:12px;font-family:'Inter',sans-serif;margin-bottom:8px;box-sizing:border-box">
-    <div id="token-result" style="min-height:20px;margin-bottom:12px;font-size:12px"></div>
-    <div style="display:flex;gap:8px">
-      <button onclick="cerrarModalToken()" style="flex:1;background:#F7F6F3;border:0.5px solid #e5e3de;color:#666;padding:9px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
-      <button id="btn-actualizar-token" onclick="actualizarTokenManual()" style="flex:2;background:#1a1a1a;color:#fff;border:none;padding:9px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif">Actualizar token</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>"""
 
