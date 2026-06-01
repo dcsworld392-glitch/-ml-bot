@@ -2336,6 +2336,30 @@ def api_mejorar_publicacion_individual():
         return jsonify({"ok": False, "error": str(e)})
 
 
+@app.route("/api/debug-item/<item_id>")
+def api_debug_item(item_id):
+    try:
+        item = sistema.ml.get(f"/items/{item_id}")
+        campos = {
+            "id": item.get("id"),
+            "title": item.get("title"),
+            "price": item.get("price"),
+            "cost": item.get("cost"),
+            "shipping_cost": item.get("shipping_cost"),
+            "base_price": item.get("base_price"),
+            "original_price": item.get("original_price"),
+        }
+        # También probar salud/métricas
+        try:
+            perf = sistema.ml.get(f"/item/{item_id}/performance")
+            campos["performance_score"] = perf.get("score")
+        except:
+            pass
+        return jsonify(campos)
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
 @app.route("/api/debug-costos")
 def api_debug_costos():
     """Debug: verificar que el JSON de Droppers está disponible."""
