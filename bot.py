@@ -1559,35 +1559,26 @@ function renderTablaPublicaciones(pubs) {
     // Desglose detallado
     let desgloseHtml = '';
     if (tieneCosto) {
-      const envio = d.costo_envio || 0;
-      const subtotalGastos = (d.costo_droppers||0) + (d.comision_ml||0) + (d.iva_iibb||0) + envio;
-      const ganancia = precio - subtotalGastos;
+      const recibisML = d.recibis_ml || (precio - (d.comision_ml||0));
+      const ganancia = d.ganancia_neta || (recibisML - (d.costo_droppers||0));
       desgloseHtml = `
       <div style="background:#F7F6F3;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px">
         <p style="font-weight:600;color:#1a1a1a;margin-bottom:8px;font-size:12px">💰 Precio de venta: $${precio.toLocaleString('es-AR')}</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #e5e3de">
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e5e3de">
             <span style="color:#666">🏭 Costo Droppers</span>
             <span><strong>$${(d.costo_droppers||0).toLocaleString('es-AR')}</strong> <span style="color:#999">(${d.costo_droppers_pct||0}%)</span></span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #e5e3de">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e5e3de">
             <span style="color:#666">📋 Comisión ML</span>
             <span><strong>$${(d.comision_ml||0).toLocaleString('es-AR')}</strong> <span style="color:#999">(${d.comision_ml_pct||0}%)</span></span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #e5e3de">
-            <span style="color:#666">🏛️ IVA + IIBB</span>
-            <span><strong>$${(d.iva_iibb||0).toLocaleString('es-AR')}</strong> <span style="color:#999">(${d.iva_iibb_pct||0}%)</span></span>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e5e3de;color:#185FA5">
+            <span style="font-weight:500">Recibís de ML</span>
+            <span><strong>$${recibisML.toLocaleString('es-AR')}</strong></span>
           </div>
-          ${envio > 0 ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #e5e3de">
-            <span style="color:#666">🚚 Envío gratis</span>
-            <span><strong>$${envio.toLocaleString('es-AR')}</strong></span>
-          </div>` : ''}
         </div>
-        <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #e5e3de;margin-top:4px">
-          <span style="color:#666;font-weight:500">Subtotal gastos</span>
-          <span style="font-weight:600;color:#A32D2D">− $${subtotalGastos.toLocaleString('es-AR')}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:2px solid #1a1a1a;margin-top:4px">
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-top:2px solid #1a1a1a;margin-top:2px">
           <span style="font-weight:700;font-size:12px">GANANCIA NETA</span>
           <span style="font-weight:700;font-size:13px;color:${ganancia>0?'#3B6D11':'#A32D2D'}">$${ganancia.toLocaleString('es-AR')} <span style="font-size:11px">(${d.margen_pct||0}%)</span></span>
         </div>
@@ -2470,20 +2461,26 @@ def api_reporte_publicaciones():
                 # Costo Droppers con matching mejorado
                 costo = buscar_costo(titulo)
 
-                # Desglose de costos
-                desglose = {}
-                if costo > 0 and precio > 0:
-                    calculo = calc.calcular(precio, costo, "default", False)
-                    desglose = {
-                        "costo_droppers": costo,
-                        "costo_droppers_pct": round(costo / precio * 100, 1),
-                        "comision_ml": calculo["comision_ml"],
-                        "comision_ml_pct": calculo["tasa_comision_pct"],
-                        "iva_iibb": round(calculo["iva_comision"] + calculo["iibb"], 2),
-                        "iva_iibb_pct": round((calculo["iva_comision"] + calculo["iibb"]) / precio * 100, 1),
-                        "ganancia_neta": calculo["ganancia_neta"],
-                        "margen_pct": calculo["margen_neto_pct"],
-                    }
+        # Desglose de costos
+        desglose = {}
+        if costo > 0 and precio > 0:
+            # Comision real de ML (lo que ML efectivamente descuenta)
+            tasa_comision = 0.145  # gold_special default
+            comision_ml = round(precio * tasa_comision, 2)
+            recibis_ml = round(precio - comision_ml, 2)
+            ganancia_neta = round(recibis_ml - costo, 2)
+            margen_pct = round(ganancia_neta / precio * 100, 1)
+            desglose = {
+                "costo_droppers": costo,
+                "costo_droppers_pct": round(costo / precio * 100, 1),
+                "comision_ml": comision_ml,
+                "comision_ml_pct": round(tasa_comision * 100, 1),
+                "iva_iibb": 0,
+                "iva_iibb_pct": 0,
+                "recibis_ml": recibis_ml,
+                "ganancia_neta": ganancia_neta,
+                "margen_pct": margen_pct,
+            }
 
                 # Promociones activas
                 promo_activa = False
