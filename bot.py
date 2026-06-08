@@ -1,4 +1,4 @@
-"""
+﻿"""
 =============================================================
   MERCADO LIBRE AUTOMATION BOT
   Sistema completo: preguntas, publicaciones y dashboard
@@ -549,8 +549,7 @@ class SistemaAutomatizado:
 app = Flask(__name__)
 sistema = SistemaAutomatizado()
 
-# Auto-cargar precios de Droppers al arrancar
-def _autocargar_precios():
+:
     global scraper_estado
     try:
         json_path = os.path.join(os.path.dirname(__file__), "productos_droppers.json")
@@ -5527,4 +5526,5 @@ class SistemaAutomatizado:
 # =============================================================
 #  DASHBOARD WEB (Flask)
 # =============================================================
+
 
