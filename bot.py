@@ -549,23 +549,6 @@ class SistemaAutomatizado:
 app = Flask(__name__)
 sistema = SistemaAutomatizado()
 
-:
-    global scraper_estado
-    try:
-        json_path = os.path.join(os.path.dirname(__file__), "productos_droppers.json")
-        if os.path.exists(json_path):
-            with open(json_path, "r", encoding="utf-8") as f:
-                productos = json.load(f)
-            con_precio = len([p for p in productos if p.get("costo", 0) > 0])
-            if con_precio > 0:
-                scraper_estado["productos"] = productos
-                log(f"Auto-cargados {con_precio}/{len(productos)} productos Droppers con precio")
-    except Exception as e:
-        log(f"Error auto-cargando precios: {e}")
-
-_autocargar_precios()
-
-
 DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="es">
 <head>
